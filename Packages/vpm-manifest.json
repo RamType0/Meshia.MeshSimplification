@@ -1,1 +1,27 @@
-{"dependencies": {}, "locked": {}}
+{
+  "dependencies": {
+    "nadena.dev.ndmf": {
+      "version": "1.6.8"
+    },
+    "com.vrchat.core.vpm-resolver": {
+      "version": "0.1.29"
+    },
+    "com.vrchat.base": {
+      "version": "3.7.5"
+    }
+  },
+  "locked": {
+    "nadena.dev.ndmf": {
+      "version": "1.6.8",
+      "dependencies": {}
+    },
+    "com.vrchat.core.vpm-resolver": {
+      "version": "0.1.29",
+      "dependencies": {}
+    },
+    "com.vrchat.base": {
+      "version": "3.7.5",
+      "dependencies": {}
+    }
+  }
+}

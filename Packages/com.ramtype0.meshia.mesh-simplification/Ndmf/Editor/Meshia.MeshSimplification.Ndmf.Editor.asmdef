@@ -1,0 +1,26 @@
+{
+    "name": "Meshia.MeshSimplification.Ndmf.Editor",
+    "rootNamespace": "Meshia.MeshSimplification.Ndmf.Editor",
+    "references": [
+        "Meshia.MeshSimplification.Runtime",
+        "Meshia.MeshSimplification.Ndmf.Runtime",
+        "nadena.dev.ndmf"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "nadena.dev.ndmf",
+            "expression": "",
+            "define": "ENABLE_NDMF"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -1,0 +1,23 @@
+{
+    "name": "Meshia.MeshSimplification.Ndmf.Runtime",
+    "rootNamespace": "Meshia.MeshSimplification.Ndmf",
+    "references": [
+        "Meshia.MeshSimplification.Runtime",
+        "VRC.SDKBase"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.base",
+            "expression": "",
+            "define": "ENABLE_VRCHAT_BASE"
+        }
+    ],
+    "noEngineReferences": false
+}
