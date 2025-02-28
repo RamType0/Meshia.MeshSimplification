@@ -62,7 +62,10 @@ namespace Meshia.MeshSimplification
             var vertexStream = mesh.GetVertexData<byte>(streamIndex);
 
             var slice = NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice<T>((byte*)NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(vertexStream) + offset, stride, mesh.vertexCount);
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
             NativeSliceUnsafeUtility.SetAtomicSafetyHandle(ref slice, NativeArrayUnsafeUtility.GetAtomicSafetyHandle(vertexStream));
+#endif
             return slice;
         }
 
