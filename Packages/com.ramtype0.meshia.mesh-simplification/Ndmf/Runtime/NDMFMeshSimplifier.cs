@@ -1,5 +1,7 @@
 using UnityEngine;
+#if ENABLE_VRCHAT_BASE
 using VRC.SDKBase;
+#endif
 
 
 namespace Meshia.MeshSimplification.Ndmf
