@@ -12,7 +12,7 @@ namespace Meshia.MeshSimplification
         public NativeBitArray TriangleIsDiscardedBits;
         public void Execute()
         {
-
+            VertexContainingTriangles.Clear();
             VertexContainingTriangles.Capacity = Triangles.Length * 3;
             TriangleIsDiscardedBits.Resize(Triangles.Length);
 

@@ -19,6 +19,7 @@ namespace Meshia.MeshSimplification
         {
 
             var triangleCount = Mesh.GetTriangleCount();
+            Triangles.Clear();
             Triangles.Capacity = triangleCount;
 
             switch (Mesh.indexFormat)

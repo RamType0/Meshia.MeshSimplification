@@ -3,6 +3,7 @@ using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
+using Unity.Mathematics.Geometry;
 using UnityEngine;
 using UnityEngine.Rendering;
 namespace Meshia.MeshSimplification
@@ -130,15 +131,93 @@ namespace Meshia.MeshSimplification
             return false;
         }
 
-        public void Simplify(int targetVertexCount)
+        public void Simplify(Mesh.MeshData originalMesh, MeshSimplificationTarget target)
         {
-            while (targetVertexCount < VertexCount && VertexMerges.TryPop(out var merge))
+            switch (target.Kind)
             {
-                if (IsValidMerge(merge))
-                {
-                    ApplyMerge(merge);
-                }
+                case MeshSimplificationTargetKind.RelativeVertexCount:
+                    {
+                        var targetVertexCount = (int)(originalMesh.vertexCount * target.Value);
+                        while (targetVertexCount < VertexCount && VertexMerges.TryPop(out var merge))
+                        {
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                            }
+                        }
+                    }
+                    break;
+                case MeshSimplificationTargetKind.AbsoluteVertexCount:
+                    {
+                        var targetVertexCount = (int)target.Value;
+                        while (targetVertexCount < VertexCount && VertexMerges.TryPop(out var merge))
+                        {
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                            }
+                        }
+                    }
+                    break;
+                case MeshSimplificationTargetKind.AbsoluteTotalError:
+                    {
+                        var maxTotalError = target.Value;
+                        var totalError = 0f;
+
+                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
+                        {
+                            VertexMerges.Pop();
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                                totalError += merge.Cost;
+                            }
+                        }
+                    }
+                    break;
+                case MeshSimplificationTargetKind.ScaledTotalError:
+                    {
+
+                        var vertexPositions = originalMesh.GetVertexPositions();
+
+                        MinMaxAABB bounds = new()
+                        {
+                            Max = float.NegativeInfinity,
+                            Min = float.PositiveInfinity,
+                        };
+
+                        for (int vertexIndex = 0; vertexIndex < vertexPositions.Length; vertexIndex++)
+                        {
+                            if (DiscardedVertex.IsSet(vertexIndex))
+                            {
+                                continue;
+                            }
+                            bounds.Encapsulate(vertexPositions[vertexIndex]);
+                        }
+
+                        if (!bounds.IsValid)
+                        {
+                            return;
+                        }
+
+                        var boundsScale = math.lengthsq(bounds.Extents);
+                        var vertexCountScale = originalMesh.vertexCount;
+                        var maxTotalError = target.Value * boundsScale * vertexCountScale;
+                        var totalError = 0f;
+
+                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
+                        {
+                            VertexMerges.Pop();
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                                totalError += merge.Cost;
+                            }
+                        }
+                    }
+                    break;
             }
+            
         }
         readonly bool IsDiscardedVertex(int vertex) => DiscardedVertex.IsSet(vertex);
         void DiscardVertex(int vertex)
@@ -625,7 +704,7 @@ namespace Meshia.MeshSimplification
                 }
             }
         }
-        public void ToMeshData(Mesh.MeshData sourceMesh, Mesh.MeshData destinationMesh, out UnsafeList<BlendShapeData> destinationBlendShapes, AllocatorManager.AllocatorHandle blendShapeDataAllocator)
+        public void ToMeshData(Mesh.MeshData sourceMesh, Mesh.MeshData destinationMesh, NativeList<BlendShapeData> destinationBlendShapes, AllocatorManager.AllocatorHandle blendShapeDataAllocator)
         {
 
             var sourceVertexCount = sourceMesh.vertexCount;
@@ -751,7 +830,10 @@ namespace Meshia.MeshSimplification
             SetVertexAttributeData(destinationMesh, VertexAttribute.BlendWeight, VertexBlendWeightBuffer, destinationToSourceVertexIndex);
             SetVertexAttributeData(destinationMesh, VertexAttribute.BlendIndices, VertexBlendIndicesBuffer.Reinterpret<int>(), destinationToSourceVertexIndex);
 
-            destinationBlendShapes = new(BlendShapes.Length, blendShapeDataAllocator);
+            if(destinationBlendShapes.Capacity < BlendShapes.Length)
+            {
+                destinationBlendShapes.Capacity = BlendShapes.Length;
+            }
 
             for (int shapeIndex = 0; shapeIndex < BlendShapes.Length; shapeIndex++)
             {

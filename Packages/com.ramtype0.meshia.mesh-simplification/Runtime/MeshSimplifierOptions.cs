@@ -34,12 +34,12 @@ namespace Meshia.MeshSimplification
 
         
 
-        public override bool Equals(object obj)
+        public readonly override bool Equals(object obj)
         {
             return obj is MeshSimplifierOptions options && Equals(options);
         }
 
-        public bool Equals(MeshSimplifierOptions other)
+        public readonly bool Equals(MeshSimplifierOptions other)
         {
             return PreserveBorderEdges == other.PreserveBorderEdges &&
                    PreserveSurfaceCurvature == other.PreserveSurfaceCurvature &&
@@ -52,7 +52,7 @@ namespace Meshia.MeshSimplification
                    VertexLinkUvDistance == other.VertexLinkUvDistance;
         }
 
-        public override int GetHashCode()
+        public readonly override int GetHashCode()
         {
             return HashCode.Combine(PreserveBorderEdges, PreserveSurfaceCurvature, MinNormalDot);
         }

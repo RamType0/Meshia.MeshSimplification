@@ -8,28 +8,26 @@ namespace Meshia.MeshSimplification
     struct ComputeMergesJob : IJobParallelForDefer
     {
         [ReadOnly]
-        public NativeArray<float3> VertexPositions;
+        public NativeArray<float3> VertexPositionBuffer;
         [ReadOnly]
         public NativeArray<ErrorQuadric> VertexErrorQuadrics;
+        [ReadOnly]
+        public NativeArray<float3> TriangleNormals;
         [ReadOnly]
         public NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
         [ReadOnly]
         public NativeBitArray VertexIsBorderEdgeBits;
         [ReadOnly]
-        public NativeArray<float3> TriangleNormals;
-
-
-        [ReadOnly]
         public NativeArray<int2> Edges;
-
-        public MeshSimplifierOptions Options;
         [WriteOnly]
         public NativeArray<VertexMerge> VertexMerges;
+
+        public MeshSimplifierOptions Options;
         public void Execute(int index)
         {
             var mergeFactory = new MergeFactory
             {
-                VertexPositions = VertexPositions,
+                VertexPositions = VertexPositionBuffer,
                 VertexErrorQuadrics = VertexErrorQuadrics,
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,

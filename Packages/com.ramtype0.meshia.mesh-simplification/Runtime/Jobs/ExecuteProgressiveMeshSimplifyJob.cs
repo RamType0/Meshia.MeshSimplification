@@ -10,9 +10,9 @@ namespace Meshia.MeshSimplification
     struct ExecuteProgressiveMeshSimplifyJob : IJob
     {
         public Mesh.MeshData Mesh;
-        public NativeArray<int> TargetVertexCounts;
-        public Mesh.MeshDataArray SimplifiedMeshes;
-        public NativeList<UnsafeList<BlendShapeData>> SimplifiedMeshesBlendShapes;
+        public MeshSimplificationTarget Target;
+        public Mesh.MeshData DestinationMesh;
+        public NativeList<BlendShapeData> DestinationBlendShapes;
 
         public NativeArray<float3> VertexPositionBuffer;
         public NativeArray<float4> VertexNormalBuffer;
@@ -77,35 +77,9 @@ namespace Meshia.MeshSimplification
                 SmartLinks = SmartLinks,
 
             };
-            SimplifiedMeshesBlendShapes.ResizeUninitialized(TargetVertexCounts.Length);
 
-            var targetVertexCounts = new NativeArray<int>(TargetVertexCounts, Allocator.Temp);
-            {
-                while (true)
-                {
-                    var maxTargetVertexCount = int.MinValue;
-                    var simplifiedMeshIndex = -1;
-                    for (int i = 0; i < targetVertexCounts.Length; i++)
-                    {
-                        if (targetVertexCounts[i] > maxTargetVertexCount)
-                        {
-                            maxTargetVertexCount = targetVertexCounts[i];
-                            simplifiedMeshIndex = i;
-                        }
-                    }
-                    if (simplifiedMeshIndex == -1)
-                    {
-                        break;
-                    }
-
-                    targetVertexCounts[simplifiedMeshIndex] = int.MinValue;
-
-                    progressiveMeshSimplifyData.Simplify(maxTargetVertexCount);
-                    progressiveMeshSimplifyData.ToMeshData(Mesh, SimplifiedMeshes[simplifiedMeshIndex], out SimplifiedMeshesBlendShapes.ElementAt(simplifiedMeshIndex), BlendShapeDataAllocator);
-                }
-
-            }
-            targetVertexCounts.Dispose();
+            progressiveMeshSimplifyData.Simplify(Mesh, Target);
+            progressiveMeshSimplifyData.ToMeshData(Mesh, DestinationMesh, DestinationBlendShapes, BlendShapeDataAllocator);
         }
     }
 }

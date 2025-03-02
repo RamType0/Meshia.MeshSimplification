@@ -34,7 +34,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                             var sourceMesh = skinnedMeshRenderer.sharedMesh;
                             Mesh simplifiedMesh = new();
-                            MeshSimplifier.Simplify(sourceMesh, (int)(sourceMesh.vertexCount * ndmfMeshSimplifier.quality), ndmfMeshSimplifier.options, simplifiedMesh);
+                            MeshSimplifier.Simplify(sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
                             AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
                             skinnedMeshRenderer.sharedMesh = simplifiedMesh;
                         }
@@ -42,7 +42,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         {
                             var sourceMesh = meshFilter.sharedMesh;
                             Mesh simplifiedMesh = new();
-                            MeshSimplifier.Simplify(sourceMesh, (int)(sourceMesh.vertexCount * ndmfMeshSimplifier.quality), ndmfMeshSimplifier.options, simplifiedMesh);
+                            MeshSimplifier.Simplify(sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
                             AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
                             meshFilter.sharedMesh = simplifiedMesh;
                         }
@@ -84,7 +84,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             context.InvokeOnInvalidate(cts, cts => cts.Cancel());
 
             Mesh simplifiedMesh = new();
-            await MeshSimplifier.SimplifyAsync(mesh, (int)(mesh.vertexCount * ndmfMeshSimplifier.quality), ndmfMeshSimplifier.options, simplifiedMesh, cts.Token);
+            await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh, cts.Token);
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
         }
 

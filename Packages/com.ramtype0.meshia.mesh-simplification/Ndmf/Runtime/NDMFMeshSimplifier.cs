@@ -11,8 +11,11 @@ namespace Meshia.MeshSimplification.Ndmf
     , IEditorOnly
 #endif
     {
-        [Range(0f, 1f)]
-        public float quality = 0.5f;
+        public MeshSimplificationTarget target = new()
+        {
+            Kind = MeshSimplificationTargetKind.RelativeVertexCount,
+            Value = 0.5f,
+        };
         public MeshSimplifierOptions options = MeshSimplifierOptions.Default;
     }
 

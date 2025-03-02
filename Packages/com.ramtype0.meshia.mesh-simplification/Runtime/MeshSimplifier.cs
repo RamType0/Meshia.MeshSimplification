@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -10,401 +11,231 @@ using UnityEngine.Rendering;
 
 namespace Meshia.MeshSimplification
 {
-    public static partial class MeshSimplifier
+    public struct MeshSimplifier : INativeDisposable
     {
-        public static void Simplify(Mesh mesh, int targetVertexCount, MeshSimplifierOptions options, Mesh destination)
+        NativeList<float3> VertexPositionBuffer;
+
+        NativeList<float4> VertexNormalBuffer;
+        NativeList<float4> VertexTangentBuffer;
+
+        NativeList<float4> VertexColorBuffer;
+
+        NativeList<float4> VertexTexCoord0Buffer;
+        NativeList<float4> VertexTexCoord1Buffer;
+        NativeList<float4> VertexTexCoord2Buffer;
+        NativeList<float4> VertexTexCoord3Buffer;
+        NativeList<float4> VertexTexCoord4Buffer;
+        NativeList<float4> VertexTexCoord5Buffer;
+        NativeList<float4> VertexTexCoord6Buffer;
+        NativeList<float4> VertexTexCoord7Buffer;
+
+        NativeList<float> VertexBlendWeightBuffer;
+        NativeList<uint> VertexBlendIndicesBuffer;
+
+        NativeList<ErrorQuadric> VertexErrorQuadrics;
+
+        NativeList<int3> Triangles;
+        NativeList<float3> TriangleNormals;
+
+
+        NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
+        NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
+
+
+        NativeBitArray VertexIsDiscardedBits;
+        NativeBitArray VertexIsBorderEdgeBits;
+        NativeBitArray TriangleIsDiscardedBits;
+
+        NativeHashSet<int2> SmartLinks;
+
+        NativeList<VertexMerge> VertexMerges;
+
+        MeshSimplifierOptions Options;
+
+        AllocatorManager.AllocatorHandle Allocator;
+
+        public JobHandle Dispose(JobHandle inputDeps)
         {
-            Allocator allocator = Allocator.TempJob;
-            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
-            var originalBlendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
-            NativeList<int> targetVertexCounts = new(1, allocator)
+            return stackalloc[]
             {
-                targetVertexCount
-            };
-            var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
-            NativeList<UnsafeList<BlendShapeData>> simplifiedMeshesBlendShapes = new(allocator);
-            var jobHandle = ScheduleSimplify(originalMeshDataArray[0], originalBlendShapes, targetVertexCounts, options, simplifiedMeshDataArray, simplifiedMeshesBlendShapes, new(), allocator);
+                VertexPositionBuffer.Dispose(inputDeps),
+                VertexNormalBuffer.Dispose(inputDeps),
+                VertexTangentBuffer.Dispose(inputDeps),
+                VertexColorBuffer.Dispose(inputDeps),
+                VertexTexCoord0Buffer.Dispose(inputDeps),
+                VertexTexCoord1Buffer.Dispose(inputDeps),
+                VertexTexCoord2Buffer.Dispose(inputDeps),
+                VertexTexCoord3Buffer.Dispose(inputDeps),
+                VertexTexCoord4Buffer.Dispose(inputDeps),
+                VertexTexCoord5Buffer.Dispose(inputDeps),
 
-            JobHandle.ScheduleBatchedJobs();
-            jobHandle.Complete();
+                VertexTexCoord6Buffer.Dispose(inputDeps),
+                VertexTexCoord7Buffer.Dispose(inputDeps),
 
-            originalMeshDataArray.Dispose();
-            ApplySimplifiedMesh(mesh, simplifiedMeshDataArray, simplifiedMeshesBlendShapes, destination);
-            BlendShapeData.Dispose(simplifiedMeshesBlendShapes);
-        }
-        public static async Task SimplifyAsync(Mesh mesh, int targetVertexCount, MeshSimplifierOptions options, Mesh destination, CancellationToken cancellationToken = default)
-        {
-            Allocator allocator = Allocator.Persistent;
-            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
-            var originalBlendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
-            NativeList<int> targetVertexCounts = new(1, allocator)
-            {
-                targetVertexCount
-            };
-            var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
-            NativeList<UnsafeList<BlendShapeData>> simplifiedMeshesBlendShapes = new(allocator);
-            var jobHandle = ScheduleSimplify(originalMeshDataArray[0], originalBlendShapes, targetVertexCounts, options, simplifiedMeshDataArray, simplifiedMeshesBlendShapes, new(), allocator);
+                VertexBlendWeightBuffer.Dispose(inputDeps),
+                VertexBlendIndicesBuffer.Dispose(inputDeps),
 
-            JobHandle.ScheduleBatchedJobs();
-            while (!jobHandle.IsCompleted)
-            {
-                await Task.Yield();
-            }
-            jobHandle.Complete();
-            originalMeshDataArray.Dispose();
-            if (cancellationToken.IsCancellationRequested)
-            {
-                simplifiedMeshDataArray.Dispose();
-            }
-            else
-            {
-                ApplySimplifiedMesh(mesh, simplifiedMeshDataArray, simplifiedMeshesBlendShapes, destination);
-            }
+                VertexErrorQuadrics.Dispose(inputDeps),
+                Triangles.Dispose(inputDeps),
+                TriangleNormals.Dispose(inputDeps),
+                VertexMergeOpponentVertices.Dispose(inputDeps),
+                VertexContainingTriangles.Dispose(inputDeps),
+                VertexIsDiscardedBits.Dispose(inputDeps),
 
-            BlendShapeData.Dispose(simplifiedMeshesBlendShapes);
-        }
-
-        private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, NativeList<UnsafeList<BlendShapeData>> simplifiedMeshesBlendShapes, Mesh destination)
-        {
-            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontResetBoneBounds | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
-
-            if(mesh != destination)
-            {
-                destination.bounds = mesh.bounds;
-#if UNITY_2023_1_OR_NEWER
-                var bindposes = mesh.GetBindposes();
-                if (bindposes.Length != 0)
-                {
-                    destination.SetBindposes(bindposes);
-                }
-#else
-                var bindposes = mesh.bindposes;
-                if(bindposes.Length != 0)
-                {
-                    destination.bindposes = bindposes;
-                }
-#endif
-            }
-
-            BlendShapeData.SetBlendShapes(destination, simplifiedMeshesBlendShapes[0]);
-        }
-
-        public static JobHandle ScheduleSimplify(Mesh.MeshData mesh, NativeList<BlendShapeData> blendShapes, NativeList<int> targetVertexCounts, MeshSimplifierOptions options, Mesh.MeshDataArray simplifiedMeshes, NativeList<UnsafeList<BlendShapeData>> simplifiedMeshesBlendShapes, JobHandle inputDeps, AllocatorManager.AllocatorHandle allocator)
-
-        {
-            //MeshDataAssert.VertexPositionIsFloat3(mesh);
-            //MeshDataAssert.AllSubMeshTopologyIsTriangles(mesh);
-            //MeshDataAssert.HasNoInvalidBlendWeights(mesh);
-
-            
-
-
-            var constructVertexPositionBuffer = ScheduleConstructVertexPositionBuffer(out var vertexPositionBuffer, mesh, inputDeps, allocator);
-            var constructVertexNormalBuffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexNormalBuffer, mesh, VertexAttribute.Normal, inputDeps, allocator);
-            var constructVertexTangentBuffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTangentBuffer, mesh, VertexAttribute.Tangent, inputDeps, allocator);
-            var constructVertexColorBuffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexColorBuffer, mesh, VertexAttribute.Color, inputDeps, allocator);
-            var constructVertexTexcoord0Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord0Buffer, mesh, VertexAttribute.TexCoord0, inputDeps, allocator);    
-            var constructVertexTexcoord1Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord1Buffer, mesh, VertexAttribute.TexCoord1, inputDeps, allocator);
-            var constructVertexTexcoord2Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord2Buffer, mesh, VertexAttribute.TexCoord2, inputDeps, allocator);
-            var constructVertexTexcoord3Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord3Buffer, mesh, VertexAttribute.TexCoord3, inputDeps, allocator);
-            var constructVertexTexcoord4Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord4Buffer, mesh, VertexAttribute.TexCoord4, inputDeps, allocator);
-            var constructVertexTexcoord5Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord5Buffer, mesh, VertexAttribute.TexCoord5, inputDeps, allocator);
-            var constructVertexTexcoord6Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord6Buffer, mesh, VertexAttribute.TexCoord6, inputDeps, allocator);
-            var constructVertexTexcoord7Buffer = ScheduleConstructVertexAttributeBufferAsFloat4(out var vertexTexCoord7Buffer, mesh, VertexAttribute.TexCoord7, inputDeps, allocator);
-            var constructVertexBlendWeightBuffer = ScheduleConstructVertexBlendWeightBuffer(out var vertexBlendWeightBuffer, mesh, inputDeps, allocator);
-            var constructVertexBlendIndicesBuffer = ScheduleConstructVertexBlendIndicesBuffer(out var vertexBlendIndicesBuffer, mesh, inputDeps, allocator);
-
-            var constructTriangles = ScheduleConstructTriangles(out var triangles, mesh, inputDeps, allocator);
-
-            var constructVertexContainingTrianglesAndTriangleDiscardedBits = ScheduleConstructVertexContainingTrianglesAndTriangleIsDiscardedBits(out var vertexContainingTriangles, out var triangleIsDiscardedBits, triangles, constructTriangles, allocator);
-
-            var constructEdgeCounts = ScheduleConstructEdgeCounts(out var edgeCounts, triangles, constructTriangles, allocator);
-
-            NativeHashSet<int2> smartLinks = new(0, allocator);
-
-            var collectSmartLinks = options.EnableSmartLink
-                ? ScheduleCollectSmartLinks(
-                    mesh,
-                    vertexPositionBuffer,
-                    vertexNormalBuffer,
-                    vertexColorBuffer,
-                    vertexTexCoord0Buffer,
-                    vertexTexCoord1Buffer,
-                    vertexTexCoord2Buffer,
-                    vertexTexCoord3Buffer,
-                    vertexTexCoord4Buffer,
-                    vertexTexCoord5Buffer,
-                    vertexTexCoord6Buffer,
-                    vertexTexCoord7Buffer,
-                    options,
-
-                    smartLinks,
-                    inputDeps,
-                    constructVertexPositionBuffer,
-                    stackalloc[]
-                    {
-                        constructVertexNormalBuffer,
-                        constructVertexColorBuffer,
-                        constructVertexTexcoord0Buffer,
-                        constructVertexTexcoord1Buffer,
-                        constructVertexTexcoord2Buffer,
-                        constructVertexTexcoord3Buffer,
-                        constructVertexTexcoord4Buffer,
-                        constructVertexTexcoord5Buffer,
-                        constructVertexTexcoord6Buffer,
-                        constructVertexTexcoord7Buffer,
-                    }.CombineDependencies(),
-                    allocator
-                    )
-                : new JobHandle();
-
-
-            var constructEdges = ScheduleConstructMergePairs(out var edges, edgeCounts, smartLinks, JobHandle.CombineDependencies(constructEdgeCounts, collectSmartLinks), allocator);
-
-            var constructVertexIsBorderEdgeBits = ScheduleConstructVertexIsBorderEdgeBits(out var vertexIsBorderEdgeBits, mesh, edgeCounts, constructEdgeCounts, allocator);
-
-            var constructTriangleNormalsAndErrorQuadrics = ScheduleConstructTriangleNormalsAndTriangleErrorQuadrics(
-                out var triangleNormals, 
-                out var triangleErrorQuadrics, 
-                
-                mesh, vertexPositionBuffer, triangles, 
-                JobHandle.CombineDependencies(constructVertexPositionBuffer, constructTriangles), 
-                allocator);
-
-            var constructVertexErrorQuadrics = ScheduleConstructVertexErrorQuadrics(
-                out var vertexErrorQuadrics, 
-                mesh, 
-                vertexPositionBuffer, 
-                triangles, 
-                vertexContainingTriangles, 
-                edgeCounts, 
-                triangleErrorQuadrics,
-                stackalloc[]
-                {
-                    constructVertexPositionBuffer,
-                    constructTriangles,
-                    constructVertexContainingTrianglesAndTriangleDiscardedBits,
-                    constructEdgeCounts,
-                    constructTriangleNormalsAndErrorQuadrics,
-                }.CombineDependencies(),
-                allocator);
-
-            edgeCounts.Dispose(JobHandle.CombineDependencies(constructEdges, constructVertexIsBorderEdgeBits, constructVertexErrorQuadrics));
-
-            triangleErrorQuadrics.Dispose(constructVertexErrorQuadrics);
-
-            var constructMerges = ScheduleConstructMerges(
-                out var vertexMerges, 
-                vertexPositionBuffer, 
-                vertexErrorQuadrics, 
-                vertexContainingTriangles, 
-                vertexIsBorderEdgeBits, 
-                triangleNormals, 
-                edges, 
-                options,
-                stackalloc[]
-                {
-                    constructVertexPositionBuffer,
-                    constructVertexErrorQuadrics,
-                    constructVertexContainingTrianglesAndTriangleDiscardedBits,
-                    constructVertexIsBorderEdgeBits,
-                    constructTriangleNormalsAndErrorQuadrics,
-                    constructEdges,
-                }.CombineDependencies(),
-                allocator);
-
-            edges.Dispose(constructMerges);
-
-            var constructVertexMergeOpponentVertices = ScheduleConstructVertexMergeOpponentVertices(out var vertexMergeOpponentVertices, vertexMerges, constructMerges, allocator);
-
-            var constructVertexIsDiscardedBits = ScheduleConstructVertexIsDiscardedBits(out var vertexIsDiscardedBits, mesh, vertexContainingTriangles, constructVertexContainingTrianglesAndTriangleDiscardedBits, allocator);
-
-            var executeProgressiveMeshSimplify = new ExecuteProgressiveMeshSimplifyJob
-            {
-                Mesh = mesh,
-                TargetVertexCounts = targetVertexCounts.AsArray(),
-                SimplifiedMeshes = simplifiedMeshes,
-                SimplifiedMeshesBlendShapes = simplifiedMeshesBlendShapes,
-                VertexPositionBuffer = vertexPositionBuffer.AsDeferredJobArray(),
-                VertexNormalBuffer = vertexNormalBuffer.AsDeferredJobArray(),
-                VertexTangentBuffer = vertexTangentBuffer.AsDeferredJobArray(),
-                VertexColorBuffer = vertexColorBuffer.AsDeferredJobArray(),
-                VertexTexCoord0Buffer = vertexTexCoord0Buffer.AsDeferredJobArray(),
-                VertexTexCoord1Buffer = vertexTexCoord1Buffer.AsDeferredJobArray(),
-                VertexTexCoord2Buffer = vertexTexCoord2Buffer.AsDeferredJobArray(),
-                VertexTexCoord3Buffer = vertexTexCoord3Buffer.AsDeferredJobArray(),
-                VertexTexCoord4Buffer = vertexTexCoord4Buffer.AsDeferredJobArray(),
-                VertexTexCoord5Buffer = vertexTexCoord5Buffer.AsDeferredJobArray(),
-                VertexTexCoord6Buffer = vertexTexCoord6Buffer.AsDeferredJobArray(),
-                VertexTexCoord7Buffer = vertexTexCoord7Buffer.AsDeferredJobArray(),
-                BlendShapes = blendShapes,
-                VertexBlendWeightBuffer = vertexBlendWeightBuffer.AsDeferredJobArray(),
-                VertexBlendIndicesBuffer = vertexBlendIndicesBuffer.AsDeferredJobArray(),
-                Triangles = triangles.AsDeferredJobArray(),
-                TriangleNormals = triangleNormals.AsDeferredJobArray(),
-                VertexContainingTriangles = vertexContainingTriangles,
-                VertexErrorQuadrics = vertexErrorQuadrics.AsDeferredJobArray(),
-                VertexMergeOpponentVertices = vertexMergeOpponentVertices,
-                DiscardedTriangle = triangleIsDiscardedBits,
-                DiscardedVertex = vertexIsDiscardedBits,
-                PreserveVertex = vertexIsBorderEdgeBits,
-                Options = options,
-                Merges = vertexMerges,
-                BlendShapeDataAllocator = allocator,
-                SmartLinks = smartLinks,
-            }.Schedule(stackalloc[]
-            {
-                inputDeps,
-
-                constructVertexPositionBuffer,
-                constructVertexNormalBuffer,
-                constructVertexTangentBuffer,
-                constructVertexColorBuffer,
-                constructVertexTexcoord0Buffer,
-                constructVertexTexcoord1Buffer,
-                constructVertexTexcoord2Buffer,
-                constructVertexTexcoord3Buffer,
-                constructVertexTexcoord4Buffer,
-                constructVertexTexcoord5Buffer,
-                constructVertexTexcoord6Buffer,
-                constructVertexTexcoord7Buffer,
-                constructVertexBlendWeightBuffer,
-                constructVertexBlendIndicesBuffer,
-
-                constructTriangles,
-                constructVertexContainingTrianglesAndTriangleDiscardedBits,
-                constructVertexErrorQuadrics,
-                constructVertexMergeOpponentVertices,
-                constructVertexIsDiscardedBits,
-                constructVertexIsBorderEdgeBits,
-                constructMerges,
-                collectSmartLinks,
-            }.CombineDependencies());
-            
-            targetVertexCounts.Dispose(executeProgressiveMeshSimplify);
-            vertexPositionBuffer.Dispose(executeProgressiveMeshSimplify);
-            vertexNormalBuffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTangentBuffer.Dispose(executeProgressiveMeshSimplify);
-            vertexColorBuffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord0Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord1Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord2Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord3Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord4Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord5Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord6Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexTexCoord7Buffer.Dispose(executeProgressiveMeshSimplify);
-            vertexBlendWeightBuffer.Dispose(executeProgressiveMeshSimplify);
-            vertexBlendIndicesBuffer.Dispose(executeProgressiveMeshSimplify);
-
-            var disposeBlendShapesJob = new DisposeBlendShapesJob
-            {
-                BlendShapes = blendShapes,
-            }.Schedule(executeProgressiveMeshSimplify);
-            blendShapes.Dispose(disposeBlendShapesJob);
-            
-            triangles.Dispose(executeProgressiveMeshSimplify);
-            triangleNormals.Dispose(executeProgressiveMeshSimplify);
-            vertexErrorQuadrics.Dispose(executeProgressiveMeshSimplify);
-            vertexContainingTriangles.Dispose(executeProgressiveMeshSimplify);
-
-            smartLinks.Dispose(executeProgressiveMeshSimplify);
-
-            vertexMergeOpponentVertices.Dispose(executeProgressiveMeshSimplify);
-
-            triangleIsDiscardedBits.Dispose(executeProgressiveMeshSimplify);
-            vertexIsDiscardedBits.Dispose(executeProgressiveMeshSimplify);
-
-            vertexIsBorderEdgeBits.Dispose(executeProgressiveMeshSimplify);
-            vertexMerges.Dispose(executeProgressiveMeshSimplify);
-
-            return executeProgressiveMeshSimplify;
+                VertexIsBorderEdgeBits.Dispose(inputDeps),
+                TriangleIsDiscardedBits.Dispose (inputDeps),
+                SmartLinks.Dispose(inputDeps),
+                VertexMerges.Dispose(inputDeps),
+            }.CombineDependencies();
         }
 
-        static JobHandle ScheduleConstructVertexPositionBuffer(out NativeList<float3> vertexPositionBuffer, Mesh.MeshData mesh, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        public void Dispose()
         {
-            vertexPositionBuffer = new(allocator);
+            VertexPositionBuffer.Dispose();
+            VertexNormalBuffer.Dispose();
+            VertexTangentBuffer.Dispose();
+            VertexColorBuffer.Dispose();
+            VertexTexCoord0Buffer.Dispose();
+            VertexTexCoord1Buffer.Dispose();
+            VertexTexCoord2Buffer.Dispose();
+            VertexTexCoord3Buffer.Dispose();
+            VertexTexCoord4Buffer.Dispose();
+            VertexTexCoord5Buffer.Dispose();
+
+            VertexTexCoord6Buffer.Dispose();
+            VertexTexCoord7Buffer.Dispose();
+
+            VertexBlendWeightBuffer.Dispose();
+            VertexBlendIndicesBuffer.Dispose();
+
+            VertexErrorQuadrics.Dispose();
+            Triangles.Dispose();
+            TriangleNormals.Dispose();
+            VertexMergeOpponentVertices.Dispose();
+            VertexContainingTriangles.Dispose();
+            VertexIsDiscardedBits.Dispose();
+
+            VertexIsBorderEdgeBits.Dispose();
+            TriangleIsDiscardedBits.Dispose();
+            SmartLinks.Dispose();
+            VertexMerges.Dispose();
+        }
+        public MeshSimplifier(AllocatorManager.AllocatorHandle allocator)
+        {
+            VertexPositionBuffer = new(allocator);
+
+            VertexNormalBuffer = new(allocator);
+            VertexTangentBuffer = new(allocator);
+
+            VertexColorBuffer = new(allocator);
+
+            VertexTexCoord0Buffer = new(allocator);
+            VertexTexCoord1Buffer = new(allocator);
+            VertexTexCoord2Buffer = new(allocator);
+            VertexTexCoord3Buffer = new(allocator);
+            VertexTexCoord4Buffer = new(allocator);
+            VertexTexCoord5Buffer = new(allocator);
+            VertexTexCoord6Buffer = new(allocator);
+            VertexTexCoord7Buffer = new(allocator);
+
+            VertexBlendWeightBuffer = new(allocator);
+            VertexBlendIndicesBuffer = new(allocator);
+
+            VertexErrorQuadrics = new(allocator);
+
+            Triangles = new(allocator);
+            TriangleNormals = new(allocator);
+
+            VertexMergeOpponentVertices = new(0, allocator);
+            VertexContainingTriangles = new(0, allocator);
+
+            VertexIsDiscardedBits = new(0, allocator, NativeArrayOptions.UninitializedMemory);
+            VertexIsBorderEdgeBits = new(0, allocator, NativeArrayOptions.UninitializedMemory);
+            TriangleIsDiscardedBits = new(0, allocator, NativeArrayOptions.UninitializedMemory);
+
+            SmartLinks = new(0, allocator);
+
+            VertexMerges = new(allocator);
+            Options = default;
+
+            Allocator = allocator;
+
+        }
+
+        JobHandle ScheduleCopyVertexPositionBuffer(Mesh.MeshData meshData, JobHandle meshDependency)
+        {
             return new CopyVertexPositionBufferJob
             {
-                Mesh = mesh,
-                VertexPositionBuffer = vertexPositionBuffer,
-            }.Schedule(dependency);
+                Mesh = meshData,
+                VertexPositionBuffer = VertexPositionBuffer,
+            }.Schedule(meshDependency);
         }
-
-        static JobHandle ScheduleConstructVertexNormalBuffer(out NativeList<float3> vertexNormalBuffer, Mesh.MeshData mesh, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleCopyVertexAttributeBufferAsFloat4(Mesh.MeshData meshData, VertexAttribute vertexAttribute, JobHandle meshDependency)
         {
-            vertexNormalBuffer = new(allocator);
-            return new CopyVertexNormalBufferJob
+            var targetBuffer = vertexAttribute switch
             {
-                Mesh = mesh,
-                VertexNormalBuffer = vertexNormalBuffer,
-            }.Schedule(dependency);
-        }
-
-        static JobHandle ScheduleConstructVertexAttributeBufferAsFloat4(out NativeList<float4> vertexAttributeBuffer, Mesh.MeshData mesh, VertexAttribute vertexAttribute, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
-        {
-            vertexAttributeBuffer = new(allocator);
+                VertexAttribute.Normal => VertexNormalBuffer,
+                VertexAttribute.Tangent => VertexTangentBuffer,
+                VertexAttribute.Color => VertexColorBuffer,
+                VertexAttribute.TexCoord0 => VertexTexCoord0Buffer,
+                VertexAttribute.TexCoord1 => VertexTexCoord1Buffer,
+                VertexAttribute.TexCoord2 => VertexTexCoord2Buffer,
+                VertexAttribute.TexCoord3 => VertexTexCoord3Buffer,
+                VertexAttribute.TexCoord4 => VertexTexCoord4Buffer,
+                VertexAttribute.TexCoord5 => VertexTexCoord5Buffer,
+                VertexAttribute.TexCoord6 => VertexTexCoord6Buffer,
+                VertexAttribute.TexCoord7 => VertexTexCoord7Buffer,
+                _ => throw new ArgumentOutOfRangeException(nameof(vertexAttribute)),
+            };
             return new CopyVertexAttributeBufferAsFloat4Job
             {
-                Mesh = mesh,
+                Mesh = meshData,
                 VertexAttribute = vertexAttribute,
-                VertexAttributeBuffer = vertexAttributeBuffer,
-            }.Schedule(dependency);
+                VertexAttributeBuffer = targetBuffer,
+            }.Schedule(meshDependency);
         }
-
-        static JobHandle ScheduleConstructVertexBlendWeightBuffer(out NativeList<float> vertexBlendWeightBuffer, Mesh.MeshData mesh, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleCopyVertexBlendWeightBuffer(Mesh.MeshData meshData, JobHandle meshDependency)
         {
-            vertexBlendWeightBuffer = new(allocator);
             return new CopyVertexBlendWeightBufferJob
             {
-                Mesh = mesh,
-                VertexBlendWeightBuffer = vertexBlendWeightBuffer,
-            }.Schedule(dependency);
+                Mesh = meshData,
+                VertexBlendWeightBuffer = VertexBlendWeightBuffer,
+            }.Schedule(meshDependency);
         }
-
-        static JobHandle ScheduleConstructVertexBlendIndicesBuffer(out NativeList<uint> vertexBlendIndicesBuffer, Mesh.MeshData mesh, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleCopyVertexBlendIndicesBuffer(Mesh.MeshData meshData, JobHandle meshDependency)
         {
-            vertexBlendIndicesBuffer = new(allocator);
             return new CopyVertexBlendIndicesBufferJob
             {
-                Mesh = mesh,
-                VertexBlendIndicesBuffer = vertexBlendIndicesBuffer,
-            }.Schedule(dependency);
+                Mesh = meshData,
+                VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
+            }.Schedule(meshDependency);
         }
-
-        static JobHandle ScheduleConstructTriangles(out NativeList<int3> triangles, Mesh.MeshData mesh, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
         {
-            triangles = new(allocator);
             return new CopyTrianglesJob
             {
                 Mesh = mesh,
-                Triangles = triangles,
-            }.Schedule(dependency);
+                Triangles = Triangles,
+            }.Schedule(meshDependency);
         }
-
-        static JobHandle ScheduleConstructVertexContainingTrianglesAndTriangleIsDiscardedBits(out NativeParallelMultiHashMap<int, int> vertexContainingTriangles, out NativeBitArray triangleIsDiscardedBits, NativeList<int3> triangles, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleInitializeVertexContainingTrianglesAndTriangleIsDiscardedBits(JobHandle trianglesDependency)
         {
-            vertexContainingTriangles = new(0, allocator);
-            triangleIsDiscardedBits= new(0, allocator, NativeArrayOptions.UninitializedMemory);
             return new CollectVertexContainingTrianglesAndMarkInvalidTrianglesJob
             {
-                Triangles = triangles.AsDeferredJobArray(),
-                VertexContainingTriangles = vertexContainingTriangles,
-                TriangleIsDiscardedBits = triangleIsDiscardedBits,
-            }.Schedule(dependency);
+                Triangles = Triangles.AsDeferredJobArray(),
+                VertexContainingTriangles = VertexContainingTriangles,
+                TriangleIsDiscardedBits = TriangleIsDiscardedBits,
+            }.Schedule(trianglesDependency);
         }
-
-        static JobHandle ScheduleConstructVertexIsDiscardedBits(out NativeBitArray vertexIsDiscardedBits, Mesh.MeshData mesh, NativeParallelMultiHashMap<int, int> vertexContainingTriangles, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        JobHandle ScheduleInitializeVertexIsBorderEdgeBits(Mesh.MeshData mesh, NativeHashMap<int2, int> edgeCounts, JobHandle meshDependency, JobHandle edgeCountsDependency)
         {
-            vertexIsDiscardedBits = new(0, allocator, NativeArrayOptions.UninitializedMemory);
-            return new FindNonReferencedVerticesJob
+            return new MarkBorderEdgeVerticesJob
             {
                 Mesh = mesh,
-                VertexContainingTriangles = vertexContainingTriangles,
-                VertexIsDiscardedBits = vertexIsDiscardedBits,
-            }.Schedule(dependency);
+                EdgeCounts = edgeCounts,
+                VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
+            }.Schedule(JobHandle.CombineDependencies(meshDependency, edgeCountsDependency));
         }
-
         static JobHandle ScheduleConstructEdgeCounts(out NativeHashMap<int2, int> edgeCounts, NativeList<int3> triangles, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
         {
             edgeCounts = new(0, allocator);
@@ -414,9 +245,6 @@ namespace Meshia.MeshSimplification
                 EdgeCounts = edgeCounts,
             }.Schedule(dependency);
         }
-
-
-
         static JobHandle ScheduleConstructMergePairs(out NativeList<int2> mergePairs, NativeHashMap<int2, int> edgeCounts, NativeHashSet<int2> smartLinks, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
         {
             mergePairs = new(allocator);
@@ -426,146 +254,6 @@ namespace Meshia.MeshSimplification
                 SmartLinks = smartLinks,
                 MergePairs = mergePairs,
             }.Schedule(dependency);
-        }
-        static JobHandle ScheduleConstructVertexIsBorderEdgeBits(out NativeBitArray vertexIsBorderEdgeBits, Mesh.MeshData mesh, NativeHashMap<int2, int> edgeCounts, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
-        {
-            vertexIsBorderEdgeBits = new(0, allocator, NativeArrayOptions.UninitializedMemory);
-            return new MarkBorderEdgeVerticesJob
-            {
-                Mesh = mesh,
-                EdgeCounts = edgeCounts,
-                VertexIsBorderEdgeBits = vertexIsBorderEdgeBits,
-            }.Schedule(dependency);
-        }
-        static JobHandle ScheduleConstructTriangleNormalsAndTriangleErrorQuadrics(
-            out NativeList<float3> triangleNormals,
-            out NativeList<ErrorQuadric> triangleErrorQuadrics,
-            Mesh.MeshData mesh,
-            NativeList<float3> vertexPositionBuffer,
-            NativeList<int3> triangles,
-            JobHandle dependency,
-            AllocatorManager.AllocatorHandle allocator)
-        {
-            triangleNormals = new(allocator);
-            triangleErrorQuadrics = new(allocator);
-
-            var initializeTriangleNormalsJob = new InitializeTriangleListJob<float3>
-            {
-                MeshData = mesh,
-                Options = NativeArrayOptions.UninitializedMemory,
-                Buffer = triangleNormals,
-            }.Schedule(dependency);
-
-            var initializeTriangleErrorQuadricsJob = new InitializeTriangleListJob<ErrorQuadric>
-            {
-                MeshData = mesh,
-                Options = NativeArrayOptions.UninitializedMemory,
-                Buffer = triangleErrorQuadrics,
-            }.Schedule(dependency);
-
-            var computeTriangleNormalsAndErrorQuadrics = new ComputeTriangleNormalsAndErrorQuadricsJob
-            {
-                VertexPositionBuffer = vertexPositionBuffer.AsDeferredJobArray(),
-                Triangles = triangles.AsDeferredJobArray(),
-                TriangleNormals = triangleNormals.AsDeferredJobArray(),
-                TriangleErrorQuadrics = triangleErrorQuadrics.AsDeferredJobArray(),
-            }.Schedule(
-                triangles, 
-            JobsUtility.CacheLineSize, 
-            JobHandle.CombineDependencies(dependency, initializeTriangleNormalsJob, initializeTriangleErrorQuadricsJob));
-
-            return computeTriangleNormalsAndErrorQuadrics;
-        }
-
-        static JobHandle ScheduleConstructVertexErrorQuadrics(
-            out NativeList<ErrorQuadric> vertexErrorQuadrics,
-            Mesh.MeshData mesh,
-            NativeList<float3> vertexPositionBuffer,
-            NativeList<int3> triangles,
-            NativeParallelMultiHashMap<int, int> vertexContainingTriangles,
-            NativeHashMap<int2, int> edgeCounts,
-            NativeList<ErrorQuadric> triangleErrorQuadrics,
-            JobHandle dependency,
-            AllocatorManager.AllocatorHandle allocator)
-        {
-            vertexErrorQuadrics = new(allocator);
-
-            var initializeVertexErrorQuadricsJob = new InitializeVertexListJob<ErrorQuadric>
-            {
-                MeshData = mesh,
-                Options = NativeArrayOptions.UninitializedMemory,
-                Buffer = vertexErrorQuadrics,
-            }.Schedule(dependency);
-
-            var computeVertexErrorQuadricsJob = new ComputeVertexErrorQuadricsJob
-            {
-                VertexPositionBuffer = vertexPositionBuffer.AsDeferredJobArray(),
-                Triangles = triangles.AsDeferredJobArray(),
-                VertexContainingTriangles = vertexContainingTriangles,
-                EdgeCounts = edgeCounts,
-                TriangleErrorQuadrics = triangleErrorQuadrics.AsDeferredJobArray(),
-                VertexErrorQuadrics = vertexErrorQuadrics.AsDeferredJobArray(),
-            }.Schedule(vertexErrorQuadrics, JobsUtility.CacheLineSize, 
-            JobHandle.CombineDependencies(dependency, initializeVertexErrorQuadricsJob));
-
-            return computeVertexErrorQuadricsJob;
-        }
-
-        static JobHandle ScheduleConstructMerges(
-            out NativeList<VertexMerge> vertexMerges,
-            NativeList<float3> vertexPositions,
-            NativeList<ErrorQuadric> vertexErrorQuadrics,
-            NativeParallelMultiHashMap<int, int> vertexContainingTriangles,
-            NativeBitArray vertexIsBorderEdgeBits,
-            NativeList<float3> triangleNormals,
-            NativeList<int2> edges,
-            MeshSimplifierOptions options,
-            JobHandle dependency,
-            AllocatorManager.AllocatorHandle allocator)
-        {
-            vertexMerges = new NativeList<VertexMerge>(allocator);
-
-            var initializeVertexMergesJob = new InitializeVertexMergesJob
-            {
-                Edges = edges.AsDeferredJobArray(),
-                VertexMerges = vertexMerges,
-            }.Schedule(dependency);
-
-            var computeMergesJob = new ComputeMergesJob
-            {
-                VertexPositions = vertexPositions.AsDeferredJobArray(),
-                VertexErrorQuadrics = vertexErrorQuadrics.AsDeferredJobArray(),
-                VertexContainingTriangles = vertexContainingTriangles,
-                VertexIsBorderEdgeBits = vertexIsBorderEdgeBits,
-                TriangleNormals = triangleNormals.AsDeferredJobArray(),
-                Edges = edges.AsDeferredJobArray(),
-                Options = options,
-                VertexMerges = vertexMerges.AsDeferredJobArray(),
-            }.Schedule(edges, JobsUtility.CacheLineSize, JobHandle.CombineDependencies(dependency, initializeVertexMergesJob));
-
-            var removeInvalidMergesJob = new RemoveInvalidMergesJob
-            {
-                VertexMerges = vertexMerges,
-            }.Schedule(computeMergesJob);
-
-            return removeInvalidMergesJob;
-        }
-
-        static JobHandle ScheduleConstructVertexMergeOpponentVertices(
-            out NativeParallelMultiHashMap<int, int> vertexMergeOpponentVertices,
-            NativeList<VertexMerge> vertexMerges,
-            JobHandle dependency,
-            AllocatorManager.AllocatorHandle allocator)
-        {
-            vertexMergeOpponentVertices = new NativeParallelMultiHashMap<int, int>(0, allocator);
-
-            var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
-            {
-                Merges = vertexMerges.AsDeferredJobArray(),
-                VertexMergeOpponentVertices = vertexMergeOpponentVertices,
-            }.Schedule(dependency);
-
-            return collectVertexMergeOpponentsJob;
         }
 
         static JobHandle ScheduleCollectSmartLinks(
@@ -631,8 +319,416 @@ namespace Meshia.MeshSimplification
             subMeshSmartLinkLists.Dispose(collectSmartLinks);
             return collectSmartLinks;
         }
-        
+        JobHandle ScheduleInitializeTriangleNormalsAndTriangleErrorQuadrics(
+            Mesh.MeshData mesh,
+            NativeList<ErrorQuadric> triangleErrorQuadrics,
+            JobHandle meshDependency,
+            JobHandle vertexPositionBufferDependency,
+            JobHandle trianglesDependency)
+        {
+
+            var initializeTriangleNormalsJob = new InitializeTriangleListJob<float3>
+            {
+                MeshData = mesh,
+                Options = NativeArrayOptions.UninitializedMemory,
+                Buffer = TriangleNormals,
+            }.Schedule(meshDependency);
+
+            var initializeTriangleErrorQuadricsJob = new InitializeTriangleListJob<ErrorQuadric>
+            {
+                MeshData = mesh,
+                Options = NativeArrayOptions.UninitializedMemory,
+                Buffer = triangleErrorQuadrics,
+            }.Schedule(meshDependency);
+
+            var computeTriangleNormalsAndErrorQuadrics = new ComputeTriangleNormalsAndErrorQuadricsJob
+            {
+                VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
+                Triangles = Triangles.AsDeferredJobArray(),
+                TriangleNormals = TriangleNormals.AsDeferredJobArray(),
+                TriangleErrorQuadrics = triangleErrorQuadrics.AsDeferredJobArray(),
+            }.Schedule(
+                Triangles,
+            JobsUtility.CacheLineSize,
+            stackalloc[]
+            {
+                vertexPositionBufferDependency,
+                trianglesDependency,
+                initializeTriangleNormalsJob,
+                initializeTriangleErrorQuadricsJob,
+            }.CombineDependencies());
+
+            return computeTriangleNormalsAndErrorQuadrics;
+        }
+
+        JobHandle ScheduleInitializeVertexErrorQuadrics(
+            Mesh.MeshData mesh,
+            NativeHashMap<int2, int> edgeCounts,
+            NativeList<ErrorQuadric> triangleErrorQuadrics,
+            JobHandle meshDependency,
+            JobHandle vertexPositionBufferDependency,
+            JobHandle trianglesDependency,
+            JobHandle vertexContainingTrianglesDependency,
+            JobHandle edgeCountsDependency,
+            JobHandle triangleErrorQuadricsDependency)
+        {
+
+            var initializeVertexErrorQuadricsJob = new InitializeVertexListJob<ErrorQuadric>
+            {
+                MeshData = mesh,
+                Options = NativeArrayOptions.UninitializedMemory,
+                Buffer = VertexErrorQuadrics,
+            }.Schedule(meshDependency);
+
+            var computeVertexErrorQuadricsJob = new ComputeVertexErrorQuadricsJob
+            {
+                VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
+                Triangles = Triangles.AsDeferredJobArray(),
+                VertexContainingTriangles = VertexContainingTriangles,
+                EdgeCounts = edgeCounts,
+                TriangleErrorQuadrics = triangleErrorQuadrics.AsDeferredJobArray(),
+                VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
+            }.Schedule(VertexErrorQuadrics, JobsUtility.CacheLineSize,
+            stackalloc[]
+            {
+                vertexPositionBufferDependency,
+                trianglesDependency,
+                vertexContainingTrianglesDependency,
+                edgeCountsDependency,
+                triangleErrorQuadricsDependency,
+                initializeVertexErrorQuadricsJob,
+            }.CombineDependencies());
+
+            return computeVertexErrorQuadricsJob;
+        }
+        JobHandle ScheduleInitializeVertexMerges(
+            NativeList<int2> edges,
+            JobHandle vertexPositionBufferDependency,
+            JobHandle vertexErrorQuadricsDependency,
+            JobHandle triangleNormalsDependency,
+            JobHandle vertexContainingTrianglesDependency,
+            JobHandle vertexIsBorderEdgeBitsDependency,
+            JobHandle edgesDependency
+            )
+        {
+
+            var initializeVertexMergesJob = new InitializeVertexMergesJob
+            {
+                Edges = edges.AsDeferredJobArray(),
+                VertexMerges = VertexMerges,
+            }.Schedule(edgesDependency);
+
+            var computeMergesJob = new ComputeMergesJob
+            {
+                VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
+                VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
+                TriangleNormals = TriangleNormals.AsDeferredJobArray(),
+                VertexContainingTriangles = VertexContainingTriangles,
+                VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
+                Edges = edges.AsDeferredJobArray(),
+                VertexMerges = VertexMerges.AsDeferredJobArray(),
+                Options = Options,
+            }.Schedule(edges, JobsUtility.CacheLineSize,
+            stackalloc[]
+            {
+                vertexPositionBufferDependency,
+                vertexErrorQuadricsDependency,
+                triangleNormalsDependency,
+                vertexContainingTrianglesDependency,
+                vertexIsBorderEdgeBitsDependency,
+                edgesDependency,
+                initializeVertexMergesJob,
+            }.CombineDependencies());
+
+            var removeInvalidMergesJob = new RemoveInvalidMergesJob
+            {
+                VertexMerges = VertexMerges,
+            }.Schedule(computeMergesJob);
+
+            return removeInvalidMergesJob;
+        }
+
+        JobHandle ScheduleInitializeVertexMergeOpponentVertices(
+            JobHandle vertexMergesDependency)
+        {
+            var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
+            {
+                VertexMerges = VertexMerges.AsDeferredJobArray(),
+                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
+            }.Schedule(vertexMergesDependency);
+
+            return collectVertexMergeOpponentsJob;
+        }
+        JobHandle ScheduleInitializeVertexIsDiscardedBits(
+            Mesh.MeshData mesh,
+            JobHandle meshDependency,
+            JobHandle vertexContainingTrianglesDependency)
+        {
+            return new FindNonReferencedVerticesJob
+            {
+                Mesh = mesh,
+                VertexContainingTriangles = VertexContainingTriangles,
+                VertexIsDiscardedBits = VertexIsDiscardedBits,
+            }.Schedule(JobHandle.CombineDependencies(meshDependency, vertexContainingTrianglesDependency));
+        }
+        public JobHandle ScheduleLoadMeshData(Mesh.MeshData mesh, MeshSimplifierOptions options, JobHandle dependency = default)
+        {
+            Options = options;
+            var constructVertexPositionBuffer = ScheduleCopyVertexPositionBuffer(mesh, dependency);
+            var constructVertexNormalBuffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.Normal, dependency);
+            var constructVertexTangentBuffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.Tangent, dependency);
+            var constructVertexColorBuffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.Color, dependency);
+            var constructVertexTexcoord0Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord0, dependency);
+            var constructVertexTexcoord1Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord1, dependency);
+            var constructVertexTexcoord2Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord2, dependency);
+            var constructVertexTexcoord3Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord3, dependency);
+            var constructVertexTexcoord4Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord4, dependency);
+            var constructVertexTexcoord5Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord5, dependency);
+            var constructVertexTexcoord6Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord6, dependency);
+            var constructVertexTexcoord7Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(mesh, VertexAttribute.TexCoord7, dependency);
+            var constructVertexBlendWeightBuffer = ScheduleCopyVertexBlendWeightBuffer(mesh, dependency);
+            var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(mesh, dependency);
+
+            var constructTriangles = ScheduleCopyTriangles(mesh, dependency);
+
+            var constructVertexContainingTrianglesAndTriangleDiscardedBits = ScheduleInitializeVertexContainingTrianglesAndTriangleIsDiscardedBits(constructTriangles);
+
+            var constructEdgeCounts = ScheduleConstructEdgeCounts(out var edgeCounts, Triangles, constructTriangles, Allocator);
+
+            var collectSmartLinks = options.EnableSmartLink
+                ? ScheduleCollectSmartLinks(
+                    mesh,
+                    VertexPositionBuffer,
+                    VertexNormalBuffer,
+                    VertexColorBuffer,
+                    VertexTexCoord0Buffer,
+                    VertexTexCoord1Buffer,
+                    VertexTexCoord2Buffer,
+                    VertexTexCoord3Buffer,
+                    VertexTexCoord4Buffer,
+                    VertexTexCoord5Buffer,
+                    VertexTexCoord6Buffer,
+                    VertexTexCoord7Buffer,
+                    options,
+                    SmartLinks,
+                    dependency,
+                    constructVertexPositionBuffer,
+                    stackalloc[]
+                    {
+                        constructVertexNormalBuffer,
+                        constructVertexColorBuffer,
+                        constructVertexTexcoord0Buffer,
+                        constructVertexTexcoord1Buffer,
+                        constructVertexTexcoord2Buffer,
+                        constructVertexTexcoord3Buffer,
+                        constructVertexTexcoord4Buffer,
+                        constructVertexTexcoord5Buffer,
+                        constructVertexTexcoord6Buffer,
+                        constructVertexTexcoord7Buffer,
+                    }.CombineDependencies(),
+                    Allocator
+                    )
+                : new JobHandle();
+
+
+            var constructEdges = ScheduleConstructMergePairs(out var edges, edgeCounts, SmartLinks, JobHandle.CombineDependencies(constructEdgeCounts, collectSmartLinks), Allocator);
+
+            var constructVertexIsBorderEdgeBits = ScheduleInitializeVertexIsBorderEdgeBits(mesh, edgeCounts, dependency, constructEdgeCounts);
+            NativeList<ErrorQuadric> triangleErrorQuadrics = new(Allocator);
+            var constructTriangleNormalsAndErrorQuadrics = ScheduleInitializeTriangleNormalsAndTriangleErrorQuadrics(mesh, triangleErrorQuadrics, dependency, constructVertexPositionBuffer, constructTriangles);
+
+            var constructVertexErrorQuadrics = ScheduleInitializeVertexErrorQuadrics(mesh, edgeCounts, triangleErrorQuadrics, dependency, constructVertexPositionBuffer, constructTriangles, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructEdgeCounts, constructTriangleNormalsAndErrorQuadrics);
+
+            edgeCounts.Dispose(JobHandle.CombineDependencies(constructEdges, constructVertexIsBorderEdgeBits, constructVertexErrorQuadrics));
+
+            triangleErrorQuadrics.Dispose(constructVertexErrorQuadrics);
+
+            var constructVertexMerges = ScheduleInitializeVertexMerges(edges, constructVertexPositionBuffer, constructVertexErrorQuadrics, constructTriangleNormalsAndErrorQuadrics, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructVertexIsBorderEdgeBits, constructEdges);
+
+            edges.Dispose(constructVertexMerges);
+
+            var constructVertexMergeOpponentVertices = ScheduleInitializeVertexMergeOpponentVertices(constructVertexMerges);
+
+            var constructVertexIsDiscardedBits = ScheduleInitializeVertexIsDiscardedBits(mesh, dependency, constructVertexContainingTrianglesAndTriangleDiscardedBits);
+            return stackalloc[]
+            {
+                dependency,
+
+                constructVertexPositionBuffer,
+
+                constructVertexNormalBuffer,
+                constructVertexTangentBuffer,
+
+                constructVertexColorBuffer,
+
+                constructVertexTexcoord0Buffer,
+                constructVertexTexcoord1Buffer,
+                constructVertexTexcoord2Buffer,
+                constructVertexTexcoord3Buffer,
+                constructVertexTexcoord4Buffer,
+                constructVertexTexcoord5Buffer,
+                constructVertexTexcoord6Buffer,
+                constructVertexTexcoord7Buffer,
+
+                constructVertexBlendWeightBuffer,
+                constructVertexBlendIndicesBuffer,
+
+                constructVertexErrorQuadrics,
+
+                constructTriangles,
+                constructTriangleNormalsAndErrorQuadrics,
+
+                constructVertexContainingTrianglesAndTriangleDiscardedBits,
+                constructVertexMergeOpponentVertices,
+
+                constructVertexIsDiscardedBits,
+                constructVertexIsBorderEdgeBits,
+
+                collectSmartLinks,
+                constructVertexMerges,
+
+            }.CombineDependencies();
+
+        }
+        public JobHandle ScheduleSimplify(Mesh.MeshData mesh, NativeList<BlendShapeData> blendShapes, MeshSimplificationTarget target, Mesh.MeshData destinationMesh, NativeList<BlendShapeData> destinationBlendShapes, JobHandle dependency)
+        {
+            return new ExecuteProgressiveMeshSimplifyJob
+            {
+                Mesh = mesh,
+                Target = target,
+                DestinationMesh = destinationMesh,
+                DestinationBlendShapes = destinationBlendShapes,
+                VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
+                VertexNormalBuffer = VertexNormalBuffer.AsDeferredJobArray(),
+                VertexTangentBuffer = VertexTangentBuffer.AsDeferredJobArray(),
+                VertexColorBuffer = VertexColorBuffer.AsDeferredJobArray(),
+                VertexTexCoord0Buffer = VertexTexCoord0Buffer.AsDeferredJobArray(),
+                VertexTexCoord1Buffer = VertexTexCoord1Buffer.AsDeferredJobArray(),
+                VertexTexCoord2Buffer = VertexTexCoord2Buffer.AsDeferredJobArray(),
+                VertexTexCoord3Buffer = VertexTexCoord3Buffer.AsDeferredJobArray(),
+                VertexTexCoord4Buffer = VertexTexCoord4Buffer.AsDeferredJobArray(),
+                VertexTexCoord5Buffer = VertexTexCoord5Buffer.AsDeferredJobArray(),
+                VertexTexCoord6Buffer = VertexTexCoord6Buffer.AsDeferredJobArray(),
+                VertexTexCoord7Buffer = VertexTexCoord7Buffer.AsDeferredJobArray(),
+                BlendShapes = blendShapes,
+                VertexBlendWeightBuffer = VertexBlendWeightBuffer.AsDeferredJobArray(),
+                VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
+                Triangles = Triangles.AsDeferredJobArray(),
+                TriangleNormals = TriangleNormals.AsDeferredJobArray(),
+                VertexContainingTriangles = VertexContainingTriangles,
+                VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
+                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
+                DiscardedTriangle = TriangleIsDiscardedBits,
+                DiscardedVertex = VertexIsDiscardedBits,
+                PreserveVertex = VertexIsBorderEdgeBits,
+                Options = Options,
+                Merges = VertexMerges,
+                BlendShapeDataAllocator = Allocator,
+                SmartLinks = SmartLinks,
+            }.Schedule(dependency);
+        }
+        public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination)
+        {
+            Allocator allocator = Unity.Collections.Allocator.TempJob;
+            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
+            var originalMeshData = originalMeshDataArray[0];
+            var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
+
+            var meshSimplifier = new MeshSimplifier(allocator);
+
+            var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
+
+            var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
+            NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
+
+            JobHandle.ScheduleBatchedJobs();
+            simplify.Complete();
+
+            originalMeshDataArray.Dispose();
+
+            foreach (var blendShape in blendShapes)
+            {
+                blendShape.Dispose();
+            }
+            blendShapes.Dispose();
+
+            ApplySimplifiedMesh(mesh, simplifiedMeshDataArray, simplifiedBlendShapes.AsArray(), destination);
+
+            foreach (var simplifiedBlendShape in simplifiedBlendShapes)
+            {
+                simplifiedBlendShape.Dispose();
+            }
+            simplifiedBlendShapes.Dispose();
+        }
+        public static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination, CancellationToken cancellationToken = default)
+        {
+            Allocator allocator = Unity.Collections.Allocator.Persistent;
+            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
+            var originalMeshData = originalMeshDataArray[0];
+            var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
+
+            var meshSimplifier = new MeshSimplifier(allocator);
+
+            var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
+
+            var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
+            NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
+
+            JobHandle.ScheduleBatchedJobs();
+            while (!simplify.IsCompleted)
+            {
+                await Task.Yield();
+            }
+            simplify.Complete();
+
+            originalMeshDataArray.Dispose();
+
+            foreach (var blendShape in blendShapes)
+            {
+                blendShape.Dispose();
+            }
+            blendShapes.Dispose();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                simplifiedMeshDataArray.Dispose();
+            }
+            else
+            {
+                ApplySimplifiedMesh(mesh, simplifiedMeshDataArray, simplifiedBlendShapes.AsArray(), destination);
+            }
+            foreach (var simplifiedBlendShape in simplifiedBlendShapes)
+            {
+                simplifiedBlendShape.Dispose();
+            }
+            simplifiedBlendShapes.Dispose();
+        }
+
+        private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<BlendShapeData> simplifiedBlendShapes, Mesh destination)
+        {
+            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontResetBoneBounds | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+
+            if (mesh != destination)
+            {
+                destination.bounds = mesh.bounds;
+#if UNITY_2023_1_OR_NEWER
+                var bindposes = mesh.GetBindposes();
+                if (bindposes.Length != 0)
+                {
+                    destination.SetBindposes(bindposes);
+                }
+#else
+                var bindposes = mesh.bindposes;
+                if (bindposes.Length != 0)
+                {
+                    destination.bindposes = bindposes;
+                }
+#endif
+            }
+
+            BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
+        }
     }
 }
-
-

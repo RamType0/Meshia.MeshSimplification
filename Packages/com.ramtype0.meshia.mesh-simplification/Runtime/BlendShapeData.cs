@@ -26,7 +26,7 @@ namespace Meshia.MeshSimplification
             return blendShapes;
         }
 
-        public static void SetBlendShapes(Mesh mesh, UnsafeList<BlendShapeData> blendShapes)
+        public static void SetBlendShapes(Mesh mesh, ReadOnlySpan<BlendShapeData> blendShapes)
         {
             var vertexCount = mesh.vertexCount;
             var deltaVerticesBuffer = new Vector3[vertexCount];
@@ -81,20 +81,6 @@ namespace Meshia.MeshSimplification
             }
             Frames.Dispose();
 
-        }
-
-        public static void Dispose(NativeList<UnsafeList<BlendShapeData>> simplifiedMeshesBlendShapes)
-        {
-            for (int meshIndex = 0; meshIndex < simplifiedMeshesBlendShapes.Length; meshIndex++)
-            {
-                var simplifiedBlendShapes = simplifiedMeshesBlendShapes[meshIndex];
-                for (int i = 0; i < simplifiedBlendShapes.Length; i++)
-                {
-                    simplifiedBlendShapes[i].Dispose();
-                }
-                simplifiedBlendShapes.Dispose();
-            }
-            simplifiedMeshesBlendShapes.Dispose();
         }
     }
 }
