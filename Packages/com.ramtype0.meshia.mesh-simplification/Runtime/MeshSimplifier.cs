@@ -634,7 +634,7 @@ namespace Meshia.MeshSimplification
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
-            var meshSimplifier = new MeshSimplifier(allocator);
+            using var meshSimplifier = new MeshSimplifier(allocator);
 
             var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
 
@@ -668,7 +668,7 @@ namespace Meshia.MeshSimplification
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
-            var meshSimplifier = new MeshSimplifier(allocator);
+            using var meshSimplifier = new MeshSimplifier(allocator);
 
             var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
 
