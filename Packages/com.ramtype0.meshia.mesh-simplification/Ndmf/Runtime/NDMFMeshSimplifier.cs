@@ -1,7 +1,4 @@
 using UnityEngine;
-#if ENABLE_VRCHAT_BASE
-using VRC.SDKBase;
-#endif
 
 
 namespace Meshia.MeshSimplification.Ndmf
@@ -10,7 +7,7 @@ namespace Meshia.MeshSimplification.Ndmf
     [RequireComponent(typeof(Renderer))]
     public class NdmfMeshSimplifier : MonoBehaviour
 #if ENABLE_VRCHAT_BASE
-    , IEditorOnly
+    , VRC.SDKBase.IEditorOnly
 #endif
     {
         public MeshSimplificationTarget target = new()
