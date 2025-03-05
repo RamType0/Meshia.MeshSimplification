@@ -84,7 +84,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             context.InvokeOnInvalidate(cts, cts => cts.Cancel());
 
             Mesh simplifiedMesh = new();
-            await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh, cts.Token);
+            try
+            {
+                await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh, cts.Token);
+            }
+            catch (System.Exception)
+            {
+                Object.DestroyImmediate(simplifiedMesh);
+                throw;
+            }
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
         }
 
