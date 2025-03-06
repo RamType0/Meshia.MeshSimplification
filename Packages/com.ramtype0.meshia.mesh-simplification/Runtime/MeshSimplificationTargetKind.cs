@@ -9,6 +9,8 @@ namespace Meshia.MeshSimplification
         AbsoluteVertexCount,
         ScaledTotalError,
         AbsoluteTotalError,
+        RelativeTriangleCount,
+        AbsoluteTriangleCount,
     }
 }
 

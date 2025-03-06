@@ -49,7 +49,7 @@ namespace Meshia.MeshSimplification
         public NativeHashSet<int2> SmartLinks;
 
         public int VertexCount;
-
+        public int TriangleCount;
         MergeFactory MergeFactory => new()
         {
 
@@ -159,22 +159,6 @@ namespace Meshia.MeshSimplification
                         }
                     }
                     break;
-                case MeshSimplificationTargetKind.AbsoluteTotalError:
-                    {
-                        var maxTotalError = target.Value;
-                        var totalError = 0f;
-
-                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
-                        {
-                            VertexMerges.Pop();
-                            if (IsValidMerge(merge))
-                            {
-                                ApplyMerge(merge);
-                                totalError += merge.Cost;
-                            }
-                        }
-                    }
-                    break;
                 case MeshSimplificationTargetKind.ScaledTotalError:
                     {
 
@@ -216,6 +200,47 @@ namespace Meshia.MeshSimplification
                         }
                     }
                     break;
+                case MeshSimplificationTargetKind.AbsoluteTotalError:
+                    {
+                        var maxTotalError = target.Value;
+                        var totalError = 0f;
+
+                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
+                        {
+                            VertexMerges.Pop();
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                                totalError += merge.Cost;
+                            }
+                        }
+                    }
+                    break;
+
+                case MeshSimplificationTargetKind.RelativeTriangleCount:
+                    {
+                        var targetTriangleCount = (int)(Triangles.Length * target.Value);
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryPop(out var merge))
+                        {
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                            }
+                        }
+                    }
+                    break;
+                case MeshSimplificationTargetKind.AbsoluteTriangleCount:
+                    {
+                        var targetTriangleCount = (int)target.Value;
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryPop(out var merge))
+                        {
+                            if (IsValidMerge(merge))
+                            {
+                                ApplyMerge(merge);
+                            }
+                        }
+                    }
+                    break;
             }
             
         }
@@ -236,6 +261,7 @@ namespace Meshia.MeshSimplification
             if (!IsDiscardedTriangle(triangleIndex))
             {
                 DiscardedTriangle.Set(triangleIndex, true);
+                TriangleCount--;
             }
 
         }

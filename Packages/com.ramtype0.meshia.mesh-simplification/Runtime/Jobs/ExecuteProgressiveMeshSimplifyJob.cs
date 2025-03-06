@@ -71,7 +71,7 @@ namespace Meshia.MeshSimplification
                 DiscardedVertex = DiscardedVertex,
                 DiscardedTriangle = DiscardedTriangle,
                 VertexCount = VertexPositionBuffer.Length - DiscardedVertex.CountBits(0, DiscardedVertex.Length),
-                
+                TriangleCount = Triangles.Length - DiscardedTriangle.CountBits(0, DiscardedTriangle.Length),
                 Options = Options,
                 TriangleNormals = TriangleNormals,
                 SmartLinks = SmartLinks,
