@@ -15,7 +15,8 @@ namespace Meshia.MeshSimplification
         public Mesh.MeshData Mesh;
         [ReadOnly]
         public NativeArray<float3> VertexPositionBuffer;
-
+        [ReadOnly]
+        public NativeBitArray VertexIsDiscardedBits;
         public MeshSimplifierOptions Options;
         public AllocatorManager.AllocatorHandle SubMeshSmartLinkListAllocator;
         public NativeArray<UnsafeList<int2>> SubMeshSmartLinkLists;
@@ -32,13 +33,17 @@ namespace Meshia.MeshSimplification
 
             for (int subMeshVertexIndex = 0; subMeshVertexIndex < subMeshVertexPositions.Length; subMeshVertexIndex++)
             {
+                if (VertexIsDiscardedBits.IsSet(subMeshDescriptor.firstVertex + subMeshVertexIndex))
+                {
+                    continue;
+                }
                 var vertexPosition = subMeshVertexPositions[subMeshVertexIndex];
 
                 kdTree.QueryPointsInSphere(subMeshVertexPositions, vertexPosition, Options.VertexLinkDistance, ref linkOpponentVertices);
 
                 foreach (var linkOpponentVertexIndex in linkOpponentVertices)
                 {
-                    if(subMeshVertexIndex < linkOpponentVertexIndex)
+                    if(subMeshVertexIndex < linkOpponentVertexIndex && !VertexIsDiscardedBits.IsSet(subMeshDescriptor.firstVertex + linkOpponentVertexIndex))
                     {
                         var pair = new int2(subMeshVertexIndex, linkOpponentVertexIndex) + subMeshDescriptor.firstVertex;
                         subMeshSmartLinkList.Add(pair);

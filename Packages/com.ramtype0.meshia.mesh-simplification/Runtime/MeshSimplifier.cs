@@ -270,11 +270,13 @@ namespace Meshia.MeshSimplification
             NativeList<float4> vertexTexcoord5Buffer,
             NativeList<float4> vertexTexcoord6Buffer,
             NativeList<float4> vertexTexcoord7Buffer,
+            NativeBitArray vertexIsDiscardedBits,
             MeshSimplifierOptions options,
             NativeHashSet<int2> smartLinks,
             JobHandle meshDependency,
             JobHandle vertexPositionBufferDependency,
             JobHandle otherVertexAttributeBufferDependency,
+            JobHandle vertexIsDiscardedBitsDependency,
             AllocatorManager.AllocatorHandle allocator
             )
         {
@@ -290,10 +292,11 @@ namespace Meshia.MeshSimplification
             {
                 Mesh = mesh,
                 VertexPositionBuffer = vertexPositionBuffer.AsDeferredJobArray(),
+                VertexIsDiscardedBits = vertexIsDiscardedBits,
                 Options = options,
                 SubMeshSmartLinkListAllocator = allocator,
                 SubMeshSmartLinkLists = subMeshSmartLinkLists.AsDeferredJobArray(),
-            }.Schedule(subMeshSmartLinkLists, 1, JobHandle.CombineDependencies(initializeSubMeshSmartLinkLists, vertexPositionBufferDependency));
+            }.Schedule(subMeshSmartLinkLists, 1, JobHandle.CombineDependencies(initializeSubMeshSmartLinkLists, vertexPositionBufferDependency, vertexIsDiscardedBitsDependency));
             var removeHighCostSmartLinks = new RemoveHighCostSmartLinksJob
             {
                 VertexNormalBuffer = vertexNormalBuffer.AsDeferredJobArray(),
@@ -495,6 +498,7 @@ namespace Meshia.MeshSimplification
 
             var constructEdgeCounts = ScheduleConstructEdgeCounts(out var edgeCounts, Triangles, constructTriangles, Allocator);
 
+            var constructVertexIsDiscardedBits = ScheduleInitializeVertexIsDiscardedBits(mesh, dependency, constructVertexContainingTrianglesAndTriangleDiscardedBits);
             var collectSmartLinks = options.EnableSmartLink
                 ? ScheduleCollectSmartLinks(
                     mesh,
@@ -509,6 +513,7 @@ namespace Meshia.MeshSimplification
                     VertexTexCoord5Buffer,
                     VertexTexCoord6Buffer,
                     VertexTexCoord7Buffer,
+                    VertexIsDiscardedBits,
                     options,
                     SmartLinks,
                     dependency,
@@ -526,6 +531,7 @@ namespace Meshia.MeshSimplification
                         constructVertexTexcoord6Buffer,
                         constructVertexTexcoord7Buffer,
                     }.CombineDependencies(),
+                    constructVertexIsDiscardedBits,
                     Allocator
                     )
                 : new JobHandle();
@@ -549,7 +555,6 @@ namespace Meshia.MeshSimplification
 
             var constructVertexMergeOpponentVertices = ScheduleInitializeVertexMergeOpponentVertices(constructVertexMerges);
 
-            var constructVertexIsDiscardedBits = ScheduleInitializeVertexIsDiscardedBits(mesh, dependency, constructVertexContainingTrianglesAndTriangleDiscardedBits);
             return stackalloc[]
             {
                 dependency,
