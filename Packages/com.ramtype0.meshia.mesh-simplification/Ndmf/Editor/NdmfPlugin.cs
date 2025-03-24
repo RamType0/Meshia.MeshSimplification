@@ -78,7 +78,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             {
                 return null;
             }
-            context.Observe(ndmfMeshSimplifier);
+            context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.target, (x, y) => x == y);
+            context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.options, (x, y) => x == y);
             context.Observe(mesh);
             CancellationTokenSource cts = new();
             context.InvokeOnInvalidate(cts, cts => cts.Cancel());
