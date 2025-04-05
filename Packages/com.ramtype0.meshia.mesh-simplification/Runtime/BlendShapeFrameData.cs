@@ -13,7 +13,7 @@ namespace Meshia.MeshSimplification
         public UnsafeList<float3> DeltaNormals;
         public UnsafeList<float3> DeltaTangents;
 
-        public unsafe static BlendShapeFrameData Create(Mesh mesh, int shapeIndex, int frameIndex, Vector3[] deltaVerticesBuffer, Vector3[] deltaNormalsBuffer, Vector3[] deltaTangentsBuffer, AllocatorManager.AllocatorHandle allocator)
+        internal unsafe static BlendShapeFrameData Create(Mesh mesh, int shapeIndex, int frameIndex, Vector3[] deltaVerticesBuffer, Vector3[] deltaNormalsBuffer, Vector3[] deltaTangentsBuffer, AllocatorManager.AllocatorHandle allocator)
         {
             var weight = mesh.GetBlendShapeFrameWeight(shapeIndex, frameIndex);
             mesh.GetBlendShapeFrameVertices(shapeIndex, frameIndex, deltaVerticesBuffer, deltaNormalsBuffer, deltaTangentsBuffer);
@@ -37,6 +37,9 @@ namespace Meshia.MeshSimplification
                 DeltaTangents = deltaTangents,
             };
         }
+        /// <summary>
+        /// Disposes the <see cref="BlendShapeFrameData"/> and its internal buffers.
+        /// </summary>
         public void Dispose()
         {
             DeltaVertices.Dispose();

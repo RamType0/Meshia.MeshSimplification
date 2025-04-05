@@ -11,10 +11,15 @@ namespace Meshia.MeshSimplification
         public UnsafeText Name;
         public UnsafeList<BlendShapeFrameData> Frames;
 
+        /// <summary>
+        /// Initializes the new list of <see cref="BlendShapeData"/> from the given <paramref name="mesh"/>.
+        /// </summary>
+        /// <param name="mesh">The mesh from which blend shapes are loaded.</param>
+        /// <param name="allocator">The allocator for returned list of <see cref="BlendShapeData"/>.</param>
+        /// <returns></returns>
         public static NativeList<BlendShapeData> GetMeshBlendShapes(Mesh mesh, AllocatorManager.AllocatorHandle allocator)
         {
             NativeList<BlendShapeData> blendShapes = new(mesh.blendShapeCount, allocator);
-
             var deltaVerticesBuffer = new Vector3[mesh.vertexCount];
             var deltaNormalsBuffer = new Vector3[mesh.vertexCount];
             var deltaTangentsBuffer = new Vector3[mesh.vertexCount];
@@ -25,7 +30,11 @@ namespace Meshia.MeshSimplification
             }
             return blendShapes;
         }
-
+        /// <summary>
+        /// Sets the blend shapes of the given <paramref name="mesh"/> from the given <paramref^@ name="blendShapes"/>.
+        /// </summary>
+        /// <param name="mesh">The mesh to set its blend shapes.</param>
+        /// <param name="blendShapes">The blend shapes to set.</param>
         public static void SetBlendShapes(Mesh mesh, ReadOnlySpan<BlendShapeData> blendShapes)
         {
             var vertexCount = mesh.vertexCount;
@@ -51,7 +60,7 @@ namespace Meshia.MeshSimplification
             }
         }
 
-        public static BlendShapeData Create(Mesh mesh, int shapeIndex, Vector3[] deltaVerticesBuffer, Vector3[] deltaNormalsBuffer, Vector3[] deltaTangentsBuffer, AllocatorManager.AllocatorHandle allocator)
+        internal static BlendShapeData Create(Mesh mesh, int shapeIndex, Vector3[] deltaVerticesBuffer, Vector3[] deltaNormalsBuffer, Vector3[] deltaTangentsBuffer, AllocatorManager.AllocatorHandle allocator)
         {
             var nameString = mesh.GetBlendShapeName(shapeIndex);
             UnsafeText name = new(nameString.Length, allocator);
@@ -71,7 +80,9 @@ namespace Meshia.MeshSimplification
                 Frames = frames,
             };
         }
-
+        /// <summary>
+        /// Disposes the <see cref="BlendShapeData"/> and its frames.
+        /// </summary>
         public void Dispose()
         {
             Name.Dispose();
