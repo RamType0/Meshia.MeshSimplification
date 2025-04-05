@@ -10,18 +10,18 @@ namespace Meshia.MeshSimplification
         [Min(0)]
         public float Value;
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             return obj is MeshSimplificationTarget target && Equals(target);
         }
 
-        public bool Equals(MeshSimplificationTarget other)
+        public readonly bool Equals(MeshSimplificationTarget other)
         {
             return Kind == other.Kind &&
                    Value == other.Value;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             return HashCode.Combine(Kind, Value);
         }
