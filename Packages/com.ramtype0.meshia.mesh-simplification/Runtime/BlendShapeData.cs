@@ -20,14 +20,18 @@ namespace Meshia.MeshSimplification
         public static NativeList<BlendShapeData> GetMeshBlendShapes(Mesh mesh, AllocatorManager.AllocatorHandle allocator)
         {
             NativeList<BlendShapeData> blendShapes = new(mesh.blendShapeCount, allocator);
-            var deltaVerticesBuffer = new Vector3[mesh.vertexCount];
-            var deltaNormalsBuffer = new Vector3[mesh.vertexCount];
-            var deltaTangentsBuffer = new Vector3[mesh.vertexCount];
-            for (int shapeIndex = 0; shapeIndex < mesh.blendShapeCount; shapeIndex++)
+            if(mesh.blendShapeCount > 0)
             {
-                var blendShape = Create(mesh, shapeIndex, deltaVerticesBuffer, deltaNormalsBuffer, deltaTangentsBuffer, allocator);
-                blendShapes.Add(blendShape);
+                var deltaVerticesBuffer = new Vector3[mesh.vertexCount];
+                var deltaNormalsBuffer = new Vector3[mesh.vertexCount];
+                var deltaTangentsBuffer = new Vector3[mesh.vertexCount];
+                for (int shapeIndex = 0; shapeIndex < mesh.blendShapeCount; shapeIndex++)
+                {
+                    var blendShape = Create(mesh, shapeIndex, deltaVerticesBuffer, deltaNormalsBuffer, deltaTangentsBuffer, allocator);
+                    blendShapes.Add(blendShape);
+                }
             }
+            
             return blendShapes;
         }
         /// <summary>
