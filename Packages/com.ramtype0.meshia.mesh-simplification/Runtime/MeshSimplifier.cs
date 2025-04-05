@@ -133,19 +133,24 @@ namespace Meshia.MeshSimplification
             }
             blendShapes.Dispose();
 
-            if (cancellationToken.IsCancellationRequested)
+            try
             {
-                simplifiedMeshDataArray.Dispose();
-            }
-            else
-            {
+                cancellationToken.ThrowIfCancellationRequested();
                 ApplySimplifiedMesh(mesh, simplifiedMeshDataArray, simplifiedBlendShapes.AsArray(), destination);
             }
-            foreach (var simplifiedBlendShape in simplifiedBlendShapes)
+            catch (OperationCanceledException)
             {
-                simplifiedBlendShape.Dispose();
+                simplifiedMeshDataArray.Dispose();
+                throw;
             }
-            simplifiedBlendShapes.Dispose();
+            finally
+            {
+                foreach (var simplifiedBlendShape in simplifiedBlendShapes)
+                {
+                    simplifiedBlendShape.Dispose();
+                }
+                simplifiedBlendShapes.Dispose();
+            }
         }
 
         private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<BlendShapeData> simplifiedBlendShapes, Mesh destination)
