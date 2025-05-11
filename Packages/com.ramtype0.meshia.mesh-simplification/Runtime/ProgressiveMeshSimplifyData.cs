@@ -27,6 +27,8 @@ namespace Meshia.MeshSimplification
         public NativeArray<float> VertexBlendWeightBuffer;
         public NativeArray<uint> VertexBlendIndicesBuffer;
 
+        public NativeArray<uint> VertexSubMeshIndexes;
+
 
         public NativeList<BlendShapeData> BlendShapes;
 
@@ -735,21 +737,34 @@ namespace Meshia.MeshSimplification
 
             var sourceVertexCount = sourceMesh.vertexCount;
             var destinationVertexCount = VertexCount;
-            var sourceTriangleCount = Triangles.Length;
+            int destTriangleIndexCount = 0;
 
+            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+            {
+                var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
+                if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
+                {
+                    int indexStart = sourceSubMeshDescriptor.indexStart / 3;
+                    int indexCount = sourceSubMeshDescriptor.indexCount / 3;
+                    destTriangleIndexCount += indexCount - DiscardedTriangle.CountBits(indexStart, indexCount);
+                }
+                else
+                {
+                    destTriangleIndexCount += sourceSubMeshDescriptor.indexCount;
+                }
+            }
 
             var destinationToSourceVertexIndex = new NativeArray<int>(destinationVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
             var sourceToDestinationVertexIndex = new NativeArray<int>(sourceVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
-            var destinationToSourceTriangleIndex = new NativeArray<int>(sourceTriangleCount - DiscardedTriangle.CountBits(0, DiscardedTriangle.Length), Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+            var destinationToSourceTriangleIndex = new NativeArray<int>(destTriangleIndexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
             var destinationIndexFormat = IndexFormat.UInt16;
 
             var destinationSubMeshes = new NativeArray<SubMeshDescriptor>(sourceMesh.subMeshCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
 
             {
-                var destinationVertexIndex = 0;
                 var destinationIndexBufferIndex = 0;
                 var destinationTriangleIndex = 0;
                 var sourceTriangleIndex = 0;
@@ -761,17 +776,9 @@ namespace Meshia.MeshSimplification
                         bounds = sourceSubMeshDescriptor.bounds,
                         topology = sourceSubMeshDescriptor.topology,
                         indexStart = destinationIndexBufferIndex,
-                        firstVertex = destinationVertexIndex,
+                        firstVertex = 0,
+                        vertexCount = 0,
                     };
-                    var sourceSubMeshLastVertex = sourceSubMeshDescriptor.firstVertex + sourceSubMeshDescriptor.vertexCount;
-
-                    for (int sourceVertexIndex = sourceSubMeshDescriptor.firstVertex; sourceVertexIndex < sourceSubMeshLastVertex; sourceVertexIndex++)
-                    {
-                        if (!DiscardedVertex.IsSet(sourceVertexIndex))
-                        {
-                            destinationToSourceVertexIndex[destinationVertexIndex++] = sourceVertexIndex;
-                        }
-                    }
 
                     if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
                     {
@@ -791,26 +798,52 @@ namespace Meshia.MeshSimplification
                     else
                     {
                         destinationIndexBufferIndex += sourceSubMeshDescriptor.indexCount;
-
                     }
 
-                    destinationSubMesh.vertexCount = destinationVertexIndex - destinationSubMesh.firstVertex;
                     destinationSubMesh.indexCount = destinationIndexBufferIndex - destinationSubMesh.indexStart;
-
-                    if (destinationSubMesh.vertexCount >= ushort.MaxValue)
-                    {
-                        destinationIndexFormat = IndexFormat.UInt32;
-                    }
 
                     // baseVertex is not set yet
                     destinationSubMeshes[subMeshIndex] = destinationSubMesh;
                 }
             }
 
-
-            for (int destinationVertexIndex = 0; destinationVertexIndex < destinationToSourceVertexIndex.Length; destinationVertexIndex++)
+            for (int sourceVertexIndex = 0, destinationVertexIndex = 0; sourceVertexIndex < sourceVertexCount; sourceVertexIndex++)
             {
-                sourceToDestinationVertexIndex[destinationToSourceVertexIndex[destinationVertexIndex]] = destinationVertexIndex;
+                if (DiscardedVertex.IsSet(sourceVertexIndex))
+                {
+                    sourceToDestinationVertexIndex[sourceVertexIndex] = 0;
+                    continue;
+                }
+                destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
+                sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
+                uint index = VertexSubMeshIndexes[sourceVertexIndex];
+                for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                {
+                    if ((index & (1u << subMeshIndex)) == 0)
+                    {
+                        continue;
+                    }
+                    ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
+                    if (destinationSubMesh.vertexCount == 0)
+                    {
+                        destinationSubMesh.firstVertex = destinationVertexIndex;
+                        destinationSubMesh.vertexCount = 1;
+                    }
+                    else if (sourceVertexIndex < destinationSubMesh.firstVertex)
+                    {
+                        destinationSubMesh.vertexCount += destinationSubMesh.firstVertex - sourceVertexIndex;
+                        destinationSubMesh.firstVertex = sourceVertexIndex;
+                    }
+                    else if (sourceVertexIndex >= destinationSubMesh.firstVertex + destinationSubMesh.vertexCount)
+                    {
+                        destinationSubMesh.vertexCount = sourceVertexIndex - destinationSubMesh.firstVertex + 1;
+                    }
+                }
+                destinationVertexIndex++;
+                if (destinationVertexIndex >= ushort.MaxValue)
+                {
+                    destinationIndexFormat = IndexFormat.UInt32;
+                }
             }
 
             var maxIndexBufferValue = destinationIndexFormat switch

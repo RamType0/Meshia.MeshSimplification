@@ -32,6 +32,8 @@ namespace Meshia.MeshSimplification
         NativeList<float> VertexBlendWeightBuffer;
         NativeList<uint> VertexBlendIndicesBuffer;
 
+        NativeList<uint> VertexSubMeshIndexes;
+
         NativeList<ErrorQuadric> VertexErrorQuadrics;
 
         NativeList<int3> Triangles;
@@ -203,6 +205,8 @@ namespace Meshia.MeshSimplification
             VertexBlendWeightBuffer = new(allocator);
             VertexBlendIndicesBuffer = new(allocator);
 
+            VertexSubMeshIndexes = new(allocator);
+
             VertexErrorQuadrics = new(allocator);
 
             Triangles = new(allocator);
@@ -248,6 +252,7 @@ namespace Meshia.MeshSimplification
             var constructVertexTexcoord7Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(meshData, VertexAttribute.TexCoord7, dependency);
             var constructVertexBlendWeightBuffer = ScheduleCopyVertexBlendWeightBuffer(meshData, dependency);
             var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(meshData, dependency);
+            var collectVertexSubMeshIndexes = ScheduleCollectVertexSubMeshIndexes(meshData, dependency);
 
             var constructTriangles = ScheduleCopyTriangles(meshData, dependency);
 
@@ -335,6 +340,8 @@ namespace Meshia.MeshSimplification
                 constructVertexBlendWeightBuffer,
                 constructVertexBlendIndicesBuffer,
 
+                collectVertexSubMeshIndexes,
+
                 constructVertexErrorQuadrics,
 
                 constructTriangles,
@@ -388,6 +395,7 @@ namespace Meshia.MeshSimplification
                 BlendShapes = blendShapes,
                 VertexBlendWeightBuffer = VertexBlendWeightBuffer.AsDeferredJobArray(),
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
+                VertexSubMeshIndexes = VertexSubMeshIndexes.AsDeferredJobArray(),
                 Triangles = Triangles.AsDeferredJobArray(),
                 TriangleNormals = TriangleNormals.AsDeferredJobArray(),
                 VertexContainingTriangles = VertexContainingTriangles,
@@ -428,6 +436,8 @@ namespace Meshia.MeshSimplification
                 VertexBlendWeightBuffer.Dispose(inputDeps),
                 VertexBlendIndicesBuffer.Dispose(inputDeps),
 
+                VertexSubMeshIndexes.Dispose(inputDeps),
+
                 VertexErrorQuadrics.Dispose(inputDeps),
                 Triangles.Dispose(inputDeps),
                 TriangleNormals.Dispose(inputDeps),
@@ -462,6 +472,8 @@ namespace Meshia.MeshSimplification
 
             VertexBlendWeightBuffer.Dispose();
             VertexBlendIndicesBuffer.Dispose();
+
+            VertexSubMeshIndexes.Dispose();
 
             VertexErrorQuadrics.Dispose();
             Triangles.Dispose();
@@ -524,6 +536,15 @@ namespace Meshia.MeshSimplification
                 Mesh = meshData,
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
             }.Schedule(meshDependency);
+        }
+        JobHandle ScheduleCollectVertexSubMeshIndexes(Mesh.MeshData mesh, JobHandle meshDependency)
+        {
+            VertexSubMeshIndexes.ResizeUninitialized(mesh.vertexCount);
+            return new CollectVertexSubMeshIndexesJob
+            {
+                Mesh = mesh,
+                VertexSubMeshIndexes = VertexSubMeshIndexes.AsArray(),
+            }.Schedule(mesh.vertexCount, 32, meshDependency);
         }
         JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
         {
