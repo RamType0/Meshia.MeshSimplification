@@ -829,14 +829,14 @@ namespace Meshia.MeshSimplification
                         destinationSubMesh.firstVertex = destinationVertexIndex;
                         destinationSubMesh.vertexCount = 1;
                     }
-                    else if (sourceVertexIndex < destinationSubMesh.firstVertex)
+                    else if (destinationVertexIndex < destinationSubMesh.firstVertex)
                     {
-                        destinationSubMesh.vertexCount += destinationSubMesh.firstVertex - sourceVertexIndex;
-                        destinationSubMesh.firstVertex = sourceVertexIndex;
+                        destinationSubMesh.vertexCount += destinationSubMesh.firstVertex - destinationVertexIndex;
+                        destinationSubMesh.firstVertex = destinationVertexIndex;
                     }
-                    else if (sourceVertexIndex >= destinationSubMesh.firstVertex + destinationSubMesh.vertexCount)
+                    else if (destinationVertexIndex >= destinationSubMesh.firstVertex + destinationSubMesh.vertexCount)
                     {
-                        destinationSubMesh.vertexCount = sourceVertexIndex - destinationSubMesh.firstVertex + 1;
+                        destinationSubMesh.vertexCount = destinationVertexIndex - destinationSubMesh.firstVertex + 1;
                     }
                 }
                 destinationVertexIndex++;
