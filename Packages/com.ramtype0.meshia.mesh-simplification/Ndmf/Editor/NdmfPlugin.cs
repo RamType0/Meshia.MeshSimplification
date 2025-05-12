@@ -81,13 +81,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.target, (x, y) => x == y);
             context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.options, (x, y) => x == y);
             context.Observe(mesh);
-            CancellationTokenSource cts = new();
-            context.InvokeOnInvalidate(cts, cts => cts.Cancel());
 
             Mesh simplifiedMesh = new();
             try
             {
-                await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh, cts.Token);
+                await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
             }
             catch (System.Exception)
             {
