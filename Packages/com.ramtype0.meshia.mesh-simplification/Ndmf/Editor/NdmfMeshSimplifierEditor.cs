@@ -2,49 +2,67 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
     [CustomEditor(typeof(NdmfMeshSimplifier))]
+    [CanEditMultipleObjects]
     public class NdmfMeshSimplifierEditor : UnityEditor.Editor
     {
-        public override void OnInspectorGUI()
+        [SerializeField]
+        VisualTreeAsset visualTreeAsset;
+        
+        public override VisualElement CreateInspectorGUI()
         {
-            
+            VisualElement root = new();
+            visualTreeAsset.CloneTree(root);
+            root.Bind(serializedObject);
 
-
-#if !ENABLE_NDMF
-            EditorGUILayout.HelpBox("This component has no effect without NDMF imported to the project.", MessageType.Warning);
+            var ndmfNotImportedWarning = root.Q<HelpBox>("NdmfNotImportedWarning");
+            DisplayStyle warningDisplayStyle;
+#if ENABLE_NDMF
+            warningDisplayStyle = DisplayStyle.None;
+#else
+            warningDisplayStyle = DisplayStyle.Flex;
 #endif
-            base.OnInspectorGUI();
+            ndmfNotImportedWarning.style.display = warningDisplayStyle;
 
-            if (targets.Length == 1)
+            var bakeMeshButtonContainer = root.Q<IMGUIContainer>("BakeMeshButtonContainer");
+            bakeMeshButtonContainer.onGUIHandler = () =>
             {
-                var ndmfMeshSimplifier = (NdmfMeshSimplifier)target;
-
-                if (TryGetTargetMesh(ndmfMeshSimplifier, out var targetMesh))
+                // TODO: Replace this with non-IMGUI implementation
+                // But how could we register callback for whether target mesh is currently available?
+                if (targets.Length == 1)
                 {
-                    if (GUILayout.Button("Bake mesh"))
+                    var ndmfMeshSimplifier = (NdmfMeshSimplifier)target;
+                    if (TryGetTargetMesh(ndmfMeshSimplifier, out var targetMesh))
                     {
-                        var absolutePath = EditorUtility.SaveFilePanel(
-                                    title: "Save baked mesh",
-                                    directory: "",
-                                    defaultName: $"{targetMesh.name}-Simplified.asset",
-                                    extension: "asset");
-
-                        if (!string.IsNullOrEmpty(absolutePath))
+                        if (GUILayout.Button("Bake mesh"))
                         {
-                            Mesh simplifiedMesh = new();
+                            var absolutePath = EditorUtility.SaveFilePanel(
+                                        title: "Save baked mesh",
+                                        directory: "",
+                                        defaultName: $"{targetMesh.name}-Simplified.asset",
+                                        extension: "asset");
 
-                            MeshSimplifier.Simplify(targetMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
+                            if (!string.IsNullOrEmpty(absolutePath))
+                            {
+                                Mesh simplifiedMesh = new();
 
-                            AssetDatabase.CreateAsset(simplifiedMesh, Path.Join("Assets/", Path.GetRelativePath(Application.dataPath, absolutePath)));
+                                MeshSimplifier.Simplify(targetMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
+
+                                AssetDatabase.CreateAsset(simplifiedMesh, Path.Join("Assets/", Path.GetRelativePath(Application.dataPath, absolutePath)));
+                            }
                         }
                     }
-                }
 
-            }
+                }
+            };
+            
+            return root;
         }
 
         private static bool TryGetTargetMesh(NdmfMeshSimplifier ndmfMeshSimplifier, [NotNullWhen(true)] out Mesh? targetMesh)
