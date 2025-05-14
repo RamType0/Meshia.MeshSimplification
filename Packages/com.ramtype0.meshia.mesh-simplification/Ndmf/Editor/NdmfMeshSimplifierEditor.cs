@@ -13,7 +13,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
     public class NdmfMeshSimplifierEditor : UnityEditor.Editor
     {
         [SerializeField]
-        VisualTreeAsset visualTreeAsset;
+        VisualTreeAsset visualTreeAsset = null!;
         
         public override VisualElement CreateInspectorGUI()
         {
