@@ -1,15 +1,27 @@
 ﻿using System;
+using Unity.Burst;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Mathematics.Geometry;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 namespace Meshia.MeshSimplification
 {
+    
     struct ProgressiveMeshSimplifyData
     {
+        [BurstCompile]
+        internal static class ProfilerMarkers
+        {
+            public static readonly ProfilerMarker MergeVertexAttributeData = new(nameof(MergeVertexAttributeData));
+            public static readonly ProfilerMarker ResolveMergedVertexReferences = new(nameof(ResolveMergedVertexReferences));
+            public static readonly ProfilerMarker CollectMergedVertexContainingTriangles = new(nameof(CollectMergedVertexContainingTriangles));
+            public static readonly ProfilerMarker RecomputeMerges = new(nameof(RecomputeMerges));
+            public static readonly ProfilerMarker DiscardNonReferencedVertices = new(nameof(DiscardNonReferencedVertices));
+        }
         public NativeArray<float3> VertexPositionBuffer;
         public NativeArray<float4> VertexNormalBuffer;
         public NativeArray<float4> VertexTangentBuffer;
@@ -37,8 +49,8 @@ namespace Meshia.MeshSimplification
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public NativeBitArray VertexIsBorderEdgeBits;
 
-        public unsafe UnsafeMinHeap<VertexMerge>* VertexMergesPtr;
-        unsafe ref UnsafeMinHeap<VertexMerge> VertexMerges => ref *VertexMergesPtr;
+        public unsafe UnsafeMinPriorityQueue<VertexMerge>* VertexMergesPtr;
+        unsafe ref UnsafeMinPriorityQueue<VertexMerge> VertexMerges => ref *VertexMergesPtr;
         public MeshSimplifierOptions Options;
 
         public NativeBitArray DiscardedVertex;
@@ -67,7 +79,7 @@ namespace Meshia.MeshSimplification
         {
             var vertexA = merge.VertexAIndex;
             var vertexB = merge.VertexBIndex;
-            var versionCheck = merge.VertexAVersion == VertexVersions[vertexA] & merge.VertexBVersion == VertexVersions[vertexB];
+            bool versionCheck = HasValidVersion(merge);
             if (!versionCheck)
             {
                 return false;
@@ -81,6 +93,11 @@ namespace Meshia.MeshSimplification
                 return false;
             }
             return true;
+        }
+
+        private readonly bool HasValidVersion(VertexMerge merge)
+        {
+            return merge.VertexAVersion == VertexVersions[merge.VertexAIndex] & merge.VertexBVersion == VertexVersions[merge.VertexBIndex];
         }
 
         readonly bool WillMakeContainingTriangleFlipped(VertexMerge merge, int vertex, int opponentVertex)
@@ -138,7 +155,8 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.RelativeVertexCount:
                     {
                         var targetVertexCount = (int)(originalMesh.vertexCount * target.Value);
-                        while (targetVertexCount < VertexCount && VertexMerges.TryPop(out var merge))
+                        VertexMerge merge;
+                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out merge))
                         {
                             if (IsValidMerge(merge))
                             {
@@ -150,7 +168,7 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.AbsoluteVertexCount:
                     {
                         var targetVertexCount = (int)target.Value;
-                        while (targetVertexCount < VertexCount && VertexMerges.TryPop(out var merge))
+                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var merge))
                         {
                             if (IsValidMerge(merge))
                             {
@@ -191,7 +209,7 @@ namespace Meshia.MeshSimplification
 
                         while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
                         {
-                            VertexMerges.Pop();
+                            VertexMerges.Dequeue();
                             if (IsValidMerge(merge))
                             {
                                 ApplyMerge(merge);
@@ -207,7 +225,7 @@ namespace Meshia.MeshSimplification
 
                         while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
                         {
-                            VertexMerges.Pop();
+                            VertexMerges.Dequeue();
                             if (IsValidMerge(merge))
                             {
                                 ApplyMerge(merge);
@@ -220,7 +238,7 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.RelativeTriangleCount:
                     {
                         var targetTriangleCount = (int)(Triangles.Length * target.Value);
-                        while (targetTriangleCount < TriangleCount && VertexMerges.TryPop(out var merge))
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var merge))
                         {
                             if (IsValidMerge(merge))
                             {
@@ -232,7 +250,7 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.AbsoluteTriangleCount:
                     {
                         var targetTriangleCount = (int)target.Value;
-                        while (targetTriangleCount < TriangleCount && VertexMerges.TryPop(out var merge))
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var merge))
                         {
                             if (IsValidMerge(merge))
                             {
@@ -300,36 +318,41 @@ namespace Meshia.MeshSimplification
             nonReferencedVertices.Add(vertexB);
 
             // Replace reference to vertexB in triangles to vertexA.
+            using(ProfilerMarkers.ResolveMergedVertexReferences.Auto())
             {
                 using var discardingTriangles = new UnsafeList<int>(vertexBContainingTriangles.Length, Allocator.Temp);
-                foreach (var triangleIndex in vertexBContainingTriangles)
+                using (ProfilerMarkers.CollectMergedVertexContainingTriangles.Auto())
                 {
-                    ref var triangleVertices = ref GetTriangleVertices(triangleIndex);
+                    foreach (var triangleIndex in vertexBContainingTriangles)
+                    {
+                        ref var triangleVertices = ref GetTriangleVertices(triangleIndex);
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-                    if (IsDiscardedTriangle(triangleIndex))
-                    {
-                        Debug.LogWarning($"Discarded triangle {triangleIndex} found in the vertex{vertexB} containing triangles.");
-                    }
-                    else if (!math.any(triangleVertices == vertexB))
-                    {
-                        Debug.LogWarning($"Triangle {triangleIndex} found in vertex{vertexB} containing triangles, but it doesn't contain the vertex{vertexB}.");
-                    }
+                        if (IsDiscardedTriangle(triangleIndex))
+                        {
+                            Debug.LogWarning($"Discarded triangle {triangleIndex} found in the vertex{vertexB} containing triangles.");
+                        }
+                        else if (!math.any(triangleVertices == vertexB))
+                        {
+                            Debug.LogWarning($"Triangle {triangleIndex} found in vertex{vertexB} containing triangles, but it doesn't contain the vertex{vertexB}.");
+                        }
 #endif
-                    // Replace vertexB in triangle to vertexA.
-                    if (math.any(triangleVertices == vertexA))
-                    {
-                        // Triangle vertices (a, b, ?) => (a, a, ?)
-                        // The triangle has only 2 vertices... discarding it
-                        discardingTriangles.Add(triangleIndex);
-                    }
-                    else
-                    {
-                        // Triangle vertices (b, ?, ?) => (a, ?, ?)
-                        triangleVertices = math.select(triangleVertices, vertexA, triangleVertices == vertexB);
-                        VertexContainingTriangles.Add(vertexA, triangleIndex);
+                        // Replace vertexB in triangle to vertexA.
+                        if (math.any(triangleVertices == vertexA))
+                        {
+                            // Triangle vertices (a, b, ?) => (a, a, ?)
+                            // The triangle has only 2 vertices... discarding it
+                            discardingTriangles.Add(triangleIndex);
+                        }
+                        else
+                        {
+                            // Triangle vertices (b, ?, ?) => (a, ?, ?)
+                            triangleVertices = math.select(triangleVertices, vertexA, triangleVertices == vertexB);
+                            VertexContainingTriangles.Add(vertexA, triangleIndex);
+                        }
                     }
                 }
+                
 
                 foreach (var triangleIndex in discardingTriangles)
                 {
@@ -376,64 +399,68 @@ namespace Meshia.MeshSimplification
 
             if (!nonReferencedVertices.Contains(vertexA))
             {
-                foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
+                using (ProfilerMarkers.RecomputeMerges.Auto())
                 {
-                    if (MergeFactory.TryComputeMerge(new(vertexA, vertexAOpponentVertex), out var position, out var cost))
+                    foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
                     {
-                        VertexMerges.Push(new VertexMerge
+                        if (MergeFactory.TryComputeMerge(new(vertexA, vertexAOpponentVertex), out var position, out var cost))
                         {
-                            VertexAIndex = vertexA,
-                            VertexBIndex = vertexAOpponentVertex,
-                            VertexAVersion = VertexVersions[vertexA],
-                            VertexBVersion = VertexVersions[vertexAOpponentVertex],
-                            Position = position,
-                            Cost = cost,
-                        });
-                    }
-
-                }
-
-                // Recompute merge with vertexB since it was merged into vertexA
-                {
-                    using var vertexBOpponentVertices = new UnsafeList<int>(16, Allocator.Temp);
-                    foreach (var vertexBOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexB))
-                    {
-                        vertexBOpponentVertices.Add(vertexBOpponentVertex);
-                    }
-                    foreach (var vertexBOpponentVertex in vertexBOpponentVertices)
-                    {
-                        if (vertexBOpponentVertex == vertexA)
-                        {
-                            continue;
-                        }
-
-                        foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
-                        {
-                            if (vertexBOpponentVertex == vertexAOpponentVertex)
-                            {
-                                goto NextVertexBOpponent;
-                            }
-                        }
-
-                        if (MergeFactory.TryComputeMerge(new(vertexA, vertexBOpponentVertex), out var position, out var cost))
-                        {
-                            VertexMerges.Push(new VertexMerge
+                            VertexMerges.Enqueue(new VertexMerge
                             {
                                 VertexAIndex = vertexA,
-                                VertexBIndex = vertexBOpponentVertex,
+                                VertexBIndex = vertexAOpponentVertex,
                                 VertexAVersion = VertexVersions[vertexA],
-                                VertexBVersion = VertexVersions[vertexBOpponentVertex],
+                                VertexBVersion = VertexVersions[vertexAOpponentVertex],
                                 Position = position,
                                 Cost = cost,
                             });
-                            VertexMergeOpponentVertices.Add(vertexA, vertexBOpponentVertex);
-                            VertexMergeOpponentVertices.Add(vertexBOpponentVertex, vertexA);
                         }
-                    NextVertexBOpponent:;
+
+                    }
+
+                    // Recompute merge with vertexB since it was merged into vertexA
+                    {
+                        using var vertexBOpponentVertices = new UnsafeList<int>(16, Allocator.Temp);
+                        foreach (var vertexBOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexB))
+                        {
+                            vertexBOpponentVertices.Add(vertexBOpponentVertex);
+                        }
+                        foreach (var vertexBOpponentVertex in vertexBOpponentVertices)
+                        {
+                            if (vertexBOpponentVertex == vertexA)
+                            {
+                                continue;
+                            }
+
+                            foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
+                            {
+                                if (vertexBOpponentVertex == vertexAOpponentVertex)
+                                {
+                                    goto NextVertexBOpponent;
+                                }
+                            }
+
+                            if (MergeFactory.TryComputeMerge(new(vertexA, vertexBOpponentVertex), out var position, out var cost))
+                            {
+                                VertexMerges.Enqueue(new VertexMerge
+                                {
+                                    VertexAIndex = vertexA,
+                                    VertexBIndex = vertexBOpponentVertex,
+                                    VertexAVersion = VertexVersions[vertexA],
+                                    VertexBVersion = VertexVersions[vertexBOpponentVertex],
+                                    Position = position,
+                                    Cost = cost,
+                                });
+                                VertexMergeOpponentVertices.Add(vertexA, vertexBOpponentVertex);
+                                VertexMergeOpponentVertices.Add(vertexBOpponentVertex, vertexA);
+                            }
+                        NextVertexBOpponent:;
+                        }
                     }
                 }
+                
             }
-
+            using(ProfilerMarkers.DiscardNonReferencedVertices.Auto())
             {
 
                 foreach (var nonReferencedVertex in nonReferencedVertices)
@@ -464,72 +491,74 @@ namespace Meshia.MeshSimplification
         }
         void MergeVertexAttributeData(int vertexA, int vertexB, float3 mergePosition)
         {
-            if (Options.UseBarycentricCoordinateInterpolation)
+            using (ProfilerMarkers.MergeVertexAttributeData.Auto())
             {
-
-                foreach (var vertexAContainingTriangleIndex in VertexContainingTriangles.GetValuesForKey(vertexA))
+                if (Options.UseBarycentricCoordinateInterpolation)
                 {
-                    var triangle = Triangles[vertexAContainingTriangleIndex];
-                    if (math.any(triangle == vertexB))
+
+                    foreach (var vertexAContainingTriangleIndex in VertexContainingTriangles.GetValuesForKey(vertexA))
                     {
-                        float3x3 triangleVertexPositions = new()
+                        var triangle = Triangles[vertexAContainingTriangleIndex];
+                        if (math.any(triangle == vertexB))
                         {
-                            c0 = VertexPositionBuffer[triangle.x],
-                            c1 = VertexPositionBuffer[triangle.y],
-                            c2 = VertexPositionBuffer[triangle.z],
-                        };
+                            float3x3 triangleVertexPositions = new()
+                            {
+                                c0 = VertexPositionBuffer[triangle.x],
+                                c1 = VertexPositionBuffer[triangle.y],
+                                c2 = VertexPositionBuffer[triangle.z],
+                            };
 
 
-                        float lerpFactor = ComputeLerpFactor(vertexA, vertexB, mergePosition);
-                        var barycentricCoordinate = ComputeBarycentricCoordinate(triangleVertexPositions, mergePosition);
+                            float lerpFactor = ComputeLerpFactor(vertexA, vertexB, mergePosition);
+                            var barycentricCoordinate = ComputeBarycentricCoordinate(triangleVertexPositions, mergePosition);
 
 
-                        VertexPositionBuffer[vertexA] = mergePosition;
-                        MergeNormalVertexAttribute(VertexNormalBuffer, triangle, vertexA, barycentricCoordinate);
-                        MergeNormalVertexAttribute(VertexTangentBuffer, triangle, vertexA, barycentricCoordinate);
+                            VertexPositionBuffer[vertexA] = mergePosition;
+                            MergeNormalVertexAttribute(VertexNormalBuffer, triangle, vertexA, barycentricCoordinate);
+                            MergeNormalVertexAttribute(VertexTangentBuffer, triangle, vertexA, barycentricCoordinate);
 
-                        MergeVectorVertexAttribute(VertexColorBuffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord0Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord1Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord2Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord3Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord4Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord5Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord6Buffer, triangle, vertexA, barycentricCoordinate);
-                        MergeVectorVertexAttribute(VertexTexCoord7Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexColorBuffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord0Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord1Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord2Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord3Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord4Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord5Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord6Buffer, triangle, vertexA, barycentricCoordinate);
+                            MergeVectorVertexAttribute(VertexTexCoord7Buffer, triangle, vertexA, barycentricCoordinate);
 
 
-                        MergeBlendWeightAndIndices(vertexA, vertexB, lerpFactor);
+                            MergeBlendWeightAndIndices(vertexA, vertexB, lerpFactor);
 
-                        MergeBlendShapes(triangle, vertexA, barycentricCoordinate);
-                        return;
+                            MergeBlendShapes(triangle, vertexA, barycentricCoordinate);
+                            return;
+                        }
                     }
                 }
+                else
+                {
+                    float lerpFactor = ComputeLerpFactor(vertexA, vertexB, mergePosition);
+
+                    VertexPositionBuffer[vertexA] = mergePosition;
+
+                    MergeNormalVertexAttribute(VertexNormalBuffer, vertexA, vertexB, lerpFactor);
+                    MergeNormalVertexAttribute(VertexTangentBuffer, vertexA, vertexB, lerpFactor);
+
+                    MergeVectorVertexAttribute(VertexColorBuffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord0Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord1Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord2Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord3Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord4Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord5Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord6Buffer, vertexA, vertexB, lerpFactor);
+                    MergeVectorVertexAttribute(VertexTexCoord7Buffer, vertexA, vertexB, lerpFactor);
+
+                    MergeBlendWeightAndIndices(vertexA, vertexB, lerpFactor);
+
+                    MergeBlendShapes(vertexA, vertexB, lerpFactor);
+                }
             }
-
-            {
-                float lerpFactor = ComputeLerpFactor(vertexA, vertexB, mergePosition);
-
-                VertexPositionBuffer[vertexA] = mergePosition;
-
-                MergeNormalVertexAttribute(VertexNormalBuffer, vertexA, vertexB, lerpFactor);
-                MergeNormalVertexAttribute(VertexTangentBuffer, vertexA, vertexB, lerpFactor);
-
-                MergeVectorVertexAttribute(VertexColorBuffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord0Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord1Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord2Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord3Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord4Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord5Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord6Buffer, vertexA, vertexB, lerpFactor);
-                MergeVectorVertexAttribute(VertexTexCoord7Buffer, vertexA, vertexB, lerpFactor);
-
-                MergeBlendWeightAndIndices(vertexA, vertexB, lerpFactor);
-
-                MergeBlendShapes(vertexA, vertexB, lerpFactor);
-            }
-
 
 
 
