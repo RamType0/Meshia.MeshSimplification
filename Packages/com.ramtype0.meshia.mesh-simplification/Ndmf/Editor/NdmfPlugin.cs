@@ -3,13 +3,14 @@
 using Meshia.MeshSimplification.Ndmf.Editor;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.preview;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Pool;
 
 
 [assembly: ExportsPlugin(typeof(NdmfPlugin))]
@@ -27,27 +28,49 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 .Run("Simplify meshes", ctx =>
                 {
                     var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<NdmfMeshSimplifier>(true);
-                    foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
+                    using(ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
-                        if (ndmfMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                        foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
                         {
+                            if (ndmfMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                            {
+                                var sourceMesh = skinnedMeshRenderer.sharedMesh;
+                                Mesh simplifiedMesh = new();
+                                parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
+                            }
+                            if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
+                            {
+                                var sourceMesh = meshFilter.sharedMesh;
+                                Mesh simplifiedMesh = new();
+                                parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
+                            }
+                            
+                        }
+                        MeshSimplifier.SimplifyBatch(parameters);
+                        {
+                            var i = 0;
 
-                            var sourceMesh = skinnedMeshRenderer.sharedMesh;
-                            Mesh simplifiedMesh = new();
-                            MeshSimplifier.Simplify(sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
-                            AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
-                            skinnedMeshRenderer.sharedMesh = simplifiedMesh;
+                            foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
+                            {
+                                if (ndmfMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                                {
+                                    var (mesh, target, options, simplifiedMesh) = parameters[i++];
+                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
+                                    skinnedMeshRenderer.sharedMesh = simplifiedMesh;
+                                }
+                                if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
+                                {
+                                    var (mesh, target, options, simplifiedMesh) = parameters[i++];
+                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
+                                    meshFilter.sharedMesh = simplifiedMesh;
+                                }
+
+                                UnityEngine.Object.DestroyImmediate(ndmfMeshSimplifier);
+                            }
                         }
-                        if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
-                        {
-                            var sourceMesh = meshFilter.sharedMesh;
-                            Mesh simplifiedMesh = new();
-                            MeshSimplifier.Simplify(sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
-                            AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
-                            meshFilter.sharedMesh = simplifiedMesh;
-                        }
-                        Object.DestroyImmediate(ndmfMeshSimplifier);
+
                     }
+
                 }).PreviewingWith(new NdmfMeshSimplifierPreviewer())
             ;
         }
@@ -87,9 +110,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             {
                 await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
             }
-            catch (System.Exception)
+            catch (Exception)
             {
-                Object.DestroyImmediate(simplifiedMesh);
+                UnityEngine.Object.DestroyImmediate(simplifiedMesh);
                 throw;
             }
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
@@ -128,7 +151,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             }
         }
 
-        void System.IDisposable.Dispose() => Object.DestroyImmediate(simplifiedMesh);
+        void IDisposable.Dispose() => UnityEngine.Object.DestroyImmediate(simplifiedMesh);
 
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections;
@@ -7,6 +8,7 @@ using Unity.Jobs;
 using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Pool;
 using UnityEngine.Rendering;
 
 namespace Meshia.MeshSimplification
@@ -93,6 +95,67 @@ namespace Meshia.MeshSimplification
             }
             simplifiedBlendShapes.Dispose();
         }
+        public static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)> parameters)
+        {
+            Allocator allocator = Unity.Collections.Allocator.TempJob;
+
+            using (ListPool<Mesh>.Get(out var meshes))
+            using (ListPool<Mesh>.Get(out var destinations))
+            {
+                Span<NativeList<BlendShapeData>> blendShapesList = stackalloc NativeList<BlendShapeData>[parameters.Count];
+                Span<NativeList<BlendShapeData>> simplifiedBlendShapesList = stackalloc NativeList<BlendShapeData>[parameters.Count];
+                Span<MeshSimplifier> meshSimplifiers = stackalloc MeshSimplifier[parameters.Count];
+                Span<JobHandle> jobHandles = stackalloc JobHandle[parameters.Count];
+                foreach (var parameter in parameters)
+                {
+                    meshes.Add(parameter.Mesh);
+                    destinations.Add(parameter.Destination);
+                }
+
+                var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(meshes);
+                var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(originalMeshDataArray.Length);
+                
+                for (int i = 0; i < parameters.Count; i++)
+                {
+                    var (mesh, target, options, destination) = parameters[i];
+                    var originalMeshData = originalMeshDataArray[i];
+                    var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
+                    blendShapesList[i] = blendShapes;
+                    var meshSimplifier = new MeshSimplifier(allocator);
+                    var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options); 
+                    NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
+                    simplifiedBlendShapesList[i] = simplifiedBlendShapes;
+
+                    var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[i], simplifiedBlendShapes, load);
+
+                    meshSimplifier.Dispose(simplify);
+                    jobHandles[i] = simplify;
+
+                }
+                JobHandle.ScheduleBatchedJobs();
+                jobHandles.CombineDependencies().Complete();
+                originalMeshDataArray.Dispose();
+                foreach (var blendShapes in blendShapesList)
+                {
+                    foreach (var blendShape in blendShapes)
+                    {
+                        blendShape.Dispose();
+                    }
+                    blendShapes.Dispose();
+                }
+                ApplySimplifiedMeshes(meshes, simplifiedMeshDataArray, simplifiedBlendShapesList, destinations);
+                foreach (var simplifiedBlendShapes in simplifiedBlendShapesList)
+                {
+                    foreach (var simplifiedBlendShape in simplifiedBlendShapes)
+                    {
+                        simplifiedBlendShape.Dispose();
+                    }
+                    simplifiedBlendShapes.Dispose();
+                }
+            }
+
+            
+        }
         /// <summary>
         /// Asynchronously simplifies the given <paramref name="mesh"/> and writes the result to <paramref name="destination"/>.
         /// </summary>
@@ -155,11 +218,16 @@ namespace Meshia.MeshSimplification
 
         private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<BlendShapeData> simplifiedBlendShapes, Mesh destination)
         {
-            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontResetBoneBounds | MeshUpdateFlags.DontNotifyMeshUsers | MeshUpdateFlags.DontRecalculateBounds);
+            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices);
+            CopyBoundsAndBindposes(mesh, destination);
+            BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
+        }
 
-            if (mesh != destination)
+        private static void CopyBoundsAndBindposes(Mesh source, Mesh destination)
+        {
+            if (source != destination)
             {
-                destination.bounds = mesh.bounds;
+                destination.bounds = source.bounds;
 #if UNITY_2023_1_OR_NEWER
                 var bindposes = mesh.GetBindposes();
                 if (bindposes.Length != 0)
@@ -167,15 +235,26 @@ namespace Meshia.MeshSimplification
                     destination.SetBindposes(bindposes);
                 }
 #else
-                var bindposes = mesh.bindposes;
+                var bindposes = source.bindposes;
                 if (bindposes.Length != 0)
                 {
                     destination.bindposes = bindposes;
                 }
 #endif
             }
+        }
 
-            BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
+        private static void ApplySimplifiedMeshes(List<Mesh> meshes, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<NativeList<BlendShapeData>> simplifiedBlendShapesList, List<Mesh> destinations)
+        {
+            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destinations, MeshUpdateFlags.DontValidateIndices);
+            for (int i = 0; i < meshes.Count; i++)
+            {
+                var mesh = meshes[i];
+                var destination = destinations[i];
+                var simplifiedBlendShapes = simplifiedBlendShapesList[i];
+                CopyBoundsAndBindposes(mesh, destination);
+                BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes.AsArray());
+            }
         }
 
         /// <summary>
