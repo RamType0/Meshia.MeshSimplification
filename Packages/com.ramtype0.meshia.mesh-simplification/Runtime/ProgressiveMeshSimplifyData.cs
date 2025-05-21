@@ -27,7 +27,7 @@ namespace Meshia.MeshSimplification
         public NativeArray<float> VertexBlendWeightBuffer;
         public NativeArray<uint> VertexBlendIndicesBuffer;
 
-        public NativeArray<uint> VertexSubMeshIndexes;
+        public NativeArray<uint> VertexSubMeshIndices;
 
 
         public NativeList<BlendShapeData> BlendShapes;
@@ -776,7 +776,7 @@ namespace Meshia.MeshSimplification
                         bounds = sourceSubMeshDescriptor.bounds,
                         topology = sourceSubMeshDescriptor.topology,
                         indexStart = destinationIndexBufferIndex,
-                        firstVertex = 0,
+                        firstVertex = int.MaxValue,
                         vertexCount = 0,
                     };
 
@@ -811,33 +811,25 @@ namespace Meshia.MeshSimplification
             {
                 if (DiscardedVertex.IsSet(sourceVertexIndex))
                 {
-                    sourceToDestinationVertexIndex[sourceVertexIndex] = 0;
+                    sourceToDestinationVertexIndex[sourceVertexIndex] = -1;
                     continue;
                 }
                 destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
                 sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
-                uint index = VertexSubMeshIndexes[sourceVertexIndex];
-                for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                uint indexMask = VertexSubMeshIndices[sourceVertexIndex];
+                while (indexMask != 0u)
                 {
-                    if ((index & (1u << subMeshIndex)) == 0)
-                    {
-                        continue;
-                    }
+                    int subMeshIndex = 31 - math.lzcnt(indexMask);
+                    indexMask &= ~(1u << subMeshIndex);
                     ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
-                    if (destinationSubMesh.vertexCount == 0)
-                    {
-                        destinationSubMesh.firstVertex = destinationVertexIndex;
-                        destinationSubMesh.vertexCount = 1;
-                    }
-                    else if (destinationVertexIndex < destinationSubMesh.firstVertex)
-                    {
-                        destinationSubMesh.vertexCount += destinationSubMesh.firstVertex - destinationVertexIndex;
-                        destinationSubMesh.firstVertex = destinationVertexIndex;
-                    }
-                    else if (destinationVertexIndex >= destinationSubMesh.firstVertex + destinationSubMesh.vertexCount)
-                    {
-                        destinationSubMesh.vertexCount = destinationVertexIndex - destinationSubMesh.firstVertex + 1;
-                    }
+                    destinationSubMesh.firstVertex = math.min(
+                        destinationSubMesh.firstVertex,
+                        destinationVertexIndex
+                    );
+                    destinationSubMesh.vertexCount = math.max(
+                        destinationSubMesh.vertexCount,
+                        destinationVertexIndex - destinationSubMesh.firstVertex + 1
+                    );
                 }
                 destinationVertexIndex++;
                 if (destinationVertexIndex >= ushort.MaxValue)

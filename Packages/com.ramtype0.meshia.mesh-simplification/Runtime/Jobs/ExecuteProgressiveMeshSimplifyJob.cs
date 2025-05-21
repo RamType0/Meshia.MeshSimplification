@@ -28,7 +28,7 @@ namespace Meshia.MeshSimplification
         public NativeArray<float4> VertexTexCoord7Buffer;
         public NativeArray<float> VertexBlendWeightBuffer;
         public NativeArray<uint> VertexBlendIndicesBuffer;
-        public NativeArray<uint> VertexSubMeshIndexes;
+        public NativeArray<uint> VertexSubMeshIndices;
         public NativeList<BlendShapeData> BlendShapes;
         public NativeArray<int3> Triangles;
         public NativeArray<ErrorQuadric> VertexErrorQuadrics;
@@ -63,7 +63,7 @@ namespace Meshia.MeshSimplification
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
                 BlendShapes = BlendShapes,
                 Triangles = Triangles,
-                VertexSubMeshIndexes = VertexSubMeshIndexes,
+                VertexSubMeshIndices = VertexSubMeshIndices,
                 VertexVersions = vertexVersions,
                 VertexErrorQuadrics = VertexErrorQuadrics,
                 VertexContainingTriangles = VertexContainingTriangles,

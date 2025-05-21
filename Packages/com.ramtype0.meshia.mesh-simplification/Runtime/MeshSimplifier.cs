@@ -32,7 +32,7 @@ namespace Meshia.MeshSimplification
         NativeList<float> VertexBlendWeightBuffer;
         NativeList<uint> VertexBlendIndicesBuffer;
 
-        NativeList<uint> VertexSubMeshIndexes;
+        NativeList<uint> VertexSubMeshIndices;
 
         NativeList<ErrorQuadric> VertexErrorQuadrics;
 
@@ -205,7 +205,7 @@ namespace Meshia.MeshSimplification
             VertexBlendWeightBuffer = new(allocator);
             VertexBlendIndicesBuffer = new(allocator);
 
-            VertexSubMeshIndexes = new(allocator);
+            VertexSubMeshIndices = new(allocator);
 
             VertexErrorQuadrics = new(allocator);
 
@@ -252,7 +252,7 @@ namespace Meshia.MeshSimplification
             var constructVertexTexcoord7Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(meshData, VertexAttribute.TexCoord7, dependency);
             var constructVertexBlendWeightBuffer = ScheduleCopyVertexBlendWeightBuffer(meshData, dependency);
             var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(meshData, dependency);
-            var collectVertexSubMeshIndexes = ScheduleCollectVertexSubMeshIndexes(meshData, dependency);
+            var collectVertexSubMeshIndices = ScheduleCollectVertexSubMeshIndices(meshData, dependency);
 
             var constructTriangles = ScheduleCopyTriangles(meshData, dependency);
 
@@ -340,7 +340,7 @@ namespace Meshia.MeshSimplification
                 constructVertexBlendWeightBuffer,
                 constructVertexBlendIndicesBuffer,
 
-                collectVertexSubMeshIndexes,
+                collectVertexSubMeshIndices,
 
                 constructVertexErrorQuadrics,
 
@@ -395,7 +395,7 @@ namespace Meshia.MeshSimplification
                 BlendShapes = blendShapes,
                 VertexBlendWeightBuffer = VertexBlendWeightBuffer.AsDeferredJobArray(),
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
-                VertexSubMeshIndexes = VertexSubMeshIndexes.AsDeferredJobArray(),
+                VertexSubMeshIndices = VertexSubMeshIndices.AsDeferredJobArray(),
                 Triangles = Triangles.AsDeferredJobArray(),
                 TriangleNormals = TriangleNormals.AsDeferredJobArray(),
                 VertexContainingTriangles = VertexContainingTriangles,
@@ -436,7 +436,7 @@ namespace Meshia.MeshSimplification
                 VertexBlendWeightBuffer.Dispose(inputDeps),
                 VertexBlendIndicesBuffer.Dispose(inputDeps),
 
-                VertexSubMeshIndexes.Dispose(inputDeps),
+                VertexSubMeshIndices.Dispose(inputDeps),
 
                 VertexErrorQuadrics.Dispose(inputDeps),
                 Triangles.Dispose(inputDeps),
@@ -473,7 +473,7 @@ namespace Meshia.MeshSimplification
             VertexBlendWeightBuffer.Dispose();
             VertexBlendIndicesBuffer.Dispose();
 
-            VertexSubMeshIndexes.Dispose();
+            VertexSubMeshIndices.Dispose();
 
             VertexErrorQuadrics.Dispose();
             Triangles.Dispose();
@@ -537,14 +537,14 @@ namespace Meshia.MeshSimplification
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
             }.Schedule(meshDependency);
         }
-        JobHandle ScheduleCollectVertexSubMeshIndexes(Mesh.MeshData mesh, JobHandle meshDependency)
+        JobHandle ScheduleCollectVertexSubMeshIndices(Mesh.MeshData mesh, JobHandle meshDependency)
         {
-            VertexSubMeshIndexes.ResizeUninitialized(mesh.vertexCount);
-            return new CollectVertexSubMeshIndexesJob
+            VertexSubMeshIndices.ResizeUninitialized(mesh.vertexCount);
+            return new CollectVertexSubMeshIndicesJob
             {
                 Mesh = mesh,
-                VertexSubMeshIndexes = VertexSubMeshIndexes.AsArray(),
-            }.Schedule(mesh.vertexCount, 32, meshDependency);
+                VertexSubMeshIndices = VertexSubMeshIndices.AsDeferredJobArray(),
+            }.Schedule(meshDependency);
         }
         JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
         {

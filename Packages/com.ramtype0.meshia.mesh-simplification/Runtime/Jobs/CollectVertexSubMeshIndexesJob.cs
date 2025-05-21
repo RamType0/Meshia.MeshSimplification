@@ -6,22 +6,25 @@ using UnityEngine;
 namespace Meshia.MeshSimplification
 {
     [BurstCompile]
-    struct CollectVertexSubMeshIndexesJob : IJobParallelFor
+    struct CollectVertexSubMeshIndicesJob : IJob
     {
         [ReadOnly] public Mesh.MeshData Mesh;
 
-        [WriteOnly] public NativeArray<uint> VertexSubMeshIndexes;
+        public NativeArray<uint> VertexSubMeshIndices;
 
-        public void Execute(int vertexIndex)
+        public void Execute()
         {
-            ref var vertexSubMeshIndex = ref VertexSubMeshIndexes.ElementAt(vertexIndex);
-            vertexSubMeshIndex = 0u;
-            for (int i = 0; i < Mesh.subMeshCount; i++)
+            for (int vertexIndex = 0; vertexIndex < Mesh.vertexCount; vertexIndex++)
             {
-                var subMesh = Mesh.GetSubMesh(i);
-                if (subMesh.firstVertex <= vertexIndex && vertexIndex < subMesh.firstVertex + subMesh.vertexCount)
+                ref var vertexSubMeshIndex = ref VertexSubMeshIndices.ElementAt(vertexIndex);
+                vertexSubMeshIndex = 0u;
+                for (int i = 0; i < Mesh.subMeshCount; i++)
                 {
-                    vertexSubMeshIndex |= 1u << i;
+                    var subMesh = Mesh.GetSubMesh(i);
+                    if (subMesh.firstVertex <= vertexIndex && vertexIndex < subMesh.firstVertex + subMesh.vertexCount)
+                    {
+                        vertexSubMeshIndex |= 1u << i;
+                    }
                 }
             }
         }
