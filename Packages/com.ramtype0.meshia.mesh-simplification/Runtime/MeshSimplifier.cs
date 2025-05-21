@@ -539,11 +539,10 @@ namespace Meshia.MeshSimplification
         }
         JobHandle ScheduleCollectVertexSubMeshIndices(Mesh.MeshData mesh, JobHandle meshDependency)
         {
-            VertexSubMeshIndices.ResizeUninitialized(mesh.vertexCount);
             return new CollectVertexSubMeshIndicesJob
             {
                 Mesh = mesh,
-                VertexSubMeshIndices = VertexSubMeshIndices.AsDeferredJobArray(),
+                VertexSubMeshIndices = VertexSubMeshIndices,
             }.Schedule(meshDependency);
         }
         JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
