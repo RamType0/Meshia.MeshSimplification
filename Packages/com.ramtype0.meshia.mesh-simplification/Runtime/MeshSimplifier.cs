@@ -539,7 +539,7 @@ namespace Meshia.MeshSimplification
         }
         JobHandle ScheduleCollectVertexSubMeshIndices(Mesh.MeshData mesh, JobHandle meshDependency)
         {
-            return new CollectVertexSubMeshIndicesJob
+            return new CollectVertexContainingSubMeshIndicesJob
             {
                 Mesh = mesh,
                 VertexContainingSubMeshIndices = VertexContainingSubMeshIndices,

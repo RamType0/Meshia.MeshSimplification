@@ -742,13 +742,11 @@ namespace Meshia.MeshSimplification
             for (int subMeshIndex = 0, triangleIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
             {
                 var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
-                switch (sourceSubMeshDescriptor.topology)
+                if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
                 {
-                    case MeshTopology.Triangles:
-                        int triangleCount = sourceSubMeshDescriptor.indexCount / 3;
-                        destTriangleIndexCount += triangleCount - DiscardedTriangle.CountBits(triangleIndex, triangleCount);
-                        triangleIndex += triangleCount;
-                        break;
+                    int triangleCount = sourceSubMeshDescriptor.indexCount / 3;
+                    destTriangleIndexCount += triangleCount - DiscardedTriangle.CountBits(triangleIndex, triangleCount);
+                    triangleIndex += triangleCount;
                 }
             }
 
@@ -834,7 +832,8 @@ namespace Meshia.MeshSimplification
 
             for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
             {
-                if (sourceMesh.GetSubMesh(subMeshIndex).vertexCount >= ushort.MaxValue)
+                ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
+                if (destinationSubMesh.vertexCount >= ushort.MaxValue)
                 {
                     destinationIndexFormat = IndexFormat.UInt32;
                     break;

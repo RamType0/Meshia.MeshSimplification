@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Meshia.MeshSimplification
 {
     [BurstCompile]
-    struct CollectVertexSubMeshIndicesJob : IJob
+    struct CollectVertexContainingSubMeshIndicesJob : IJob
     {
         [ReadOnly] public Mesh.MeshData Mesh;
 
