@@ -10,18 +10,18 @@ namespace Meshia.MeshSimplification
     {
         [ReadOnly] public Mesh.MeshData Mesh;
 
-        public NativeList<uint> VertexSubMeshIndices;
+        public NativeList<uint> VertexContainingSubMeshIndices;
 
         public void Execute()
         {
-            VertexSubMeshIndices.Resize(Mesh.vertexCount, NativeArrayOptions.ClearMemory);
+            VertexContainingSubMeshIndices.Resize(Mesh.vertexCount, NativeArrayOptions.ClearMemory);
             for (int i = 0; i < Mesh.subMeshCount; i++)
             {
                 var subMesh = Mesh.GetSubMesh(i);
                 uint bit = 1u << i;
-                for (int vertexIndex = subMesh.firstVertex; vertexIndex < subMesh.vertexCount; vertexIndex++)
+                for (int vertexIndex = subMesh.firstVertex, endIndex = subMesh.firstVertex + subMesh.vertexCount; vertexIndex < endIndex; vertexIndex++)
                 {
-                    ref var vertexSubMeshIndex = ref VertexSubMeshIndices.ElementAt(vertexIndex);
+                    ref var vertexSubMeshIndex = ref VertexContainingSubMeshIndices.ElementAt(vertexIndex);
                     vertexSubMeshIndex |= bit;
                 }
             }

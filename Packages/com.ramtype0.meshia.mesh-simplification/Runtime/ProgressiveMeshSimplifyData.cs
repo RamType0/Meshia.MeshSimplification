@@ -27,7 +27,7 @@ namespace Meshia.MeshSimplification
         public NativeArray<float> VertexBlendWeightBuffer;
         public NativeArray<uint> VertexBlendIndicesBuffer;
 
-        public NativeArray<uint> VertexSubMeshIndices;
+        public NativeArray<uint> VertexContainingSubMeshIndices;
 
 
         public NativeList<BlendShapeData> BlendShapes;
@@ -739,18 +739,16 @@ namespace Meshia.MeshSimplification
             var destinationVertexCount = VertexCount;
             int destTriangleIndexCount = 0;
 
-            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+            for (int subMeshIndex = 0, triangleIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
             {
                 var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
-                if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
+                switch (sourceSubMeshDescriptor.topology)
                 {
-                    int indexStart = sourceSubMeshDescriptor.indexStart / 3;
-                    int indexCount = sourceSubMeshDescriptor.indexCount / 3;
-                    destTriangleIndexCount += indexCount - DiscardedTriangle.CountBits(indexStart, indexCount);
-                }
-                else
-                {
-                    destTriangleIndexCount += sourceSubMeshDescriptor.indexCount;
+                    case MeshTopology.Triangles:
+                        int triangleCount = sourceSubMeshDescriptor.indexCount / 3;
+                        destTriangleIndexCount += triangleCount - DiscardedTriangle.CountBits(triangleIndex, triangleCount);
+                        triangleIndex += triangleCount;
+                        break;
                 }
             }
 
@@ -816,7 +814,7 @@ namespace Meshia.MeshSimplification
                 }
                 destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
                 sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
-                uint indexMask = VertexSubMeshIndices[sourceVertexIndex];
+                uint indexMask = VertexContainingSubMeshIndices[sourceVertexIndex];
                 while (indexMask != 0u)
                 {
                     int subMeshIndex = 31 - math.lzcnt(indexMask);
@@ -832,9 +830,14 @@ namespace Meshia.MeshSimplification
                     );
                 }
                 destinationVertexIndex++;
-                if (destinationVertexIndex >= ushort.MaxValue)
+            }
+
+            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+            {
+                if (sourceMesh.GetSubMesh(subMeshIndex).vertexCount >= ushort.MaxValue)
                 {
                     destinationIndexFormat = IndexFormat.UInt32;
+                    break;
                 }
             }
 
