@@ -836,16 +836,14 @@ namespace Meshia.MeshSimplification
             {
                 if (DiscardedVertex.IsSet(sourceVertexIndex))
                 {
-                    sourceToDestinationVertexIndex[sourceVertexIndex] = -1;
                     continue;
                 }
                 destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
                 sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
-                uint indexMask = VertexContainingSubMeshIndices[sourceVertexIndex];
-                while (indexMask != 0u)
+
+                for (uint indexMask = VertexContainingSubMeshIndices[sourceVertexIndex]; indexMask != 0u; indexMask &= indexMask - 1)
                 {
-                    int subMeshIndex = 31 - math.lzcnt(indexMask);
-                    indexMask &= ~(1u << subMeshIndex);
+                    var subMeshIndex = math.tzcnt(indexMask);
                     ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
                     destinationSubMesh.firstVertex = math.min(
                         destinationSubMesh.firstVertex,

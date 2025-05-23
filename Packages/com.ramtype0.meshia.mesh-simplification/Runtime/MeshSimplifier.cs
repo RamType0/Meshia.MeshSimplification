@@ -331,7 +331,8 @@ namespace Meshia.MeshSimplification
             var constructVertexTexcoord7Buffer = ScheduleCopyVertexAttributeBufferAsFloat4(meshData, VertexAttribute.TexCoord7, dependency);
             var constructVertexBlendWeightBuffer = ScheduleCopyVertexBlendWeightBuffer(meshData, dependency);
             var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(meshData, dependency);
-            var collectVertexSubMeshIndices = ScheduleCollectVertexContainingSubMeshIndices(meshData, dependency);
+
+            var collectVertexContainingSubMeshIndices = ScheduleCollectVertexContainingSubMeshIndices(meshData, dependency);
 
             var constructTriangles = ScheduleCopyTriangles(meshData, dependency);
 
@@ -419,7 +420,7 @@ namespace Meshia.MeshSimplification
                 constructVertexBlendWeightBuffer,
                 constructVertexBlendIndicesBuffer,
 
-                collectVertexSubMeshIndices,
+                collectVertexContainingSubMeshIndices,
 
                 constructVertexErrorQuadrics,
 
