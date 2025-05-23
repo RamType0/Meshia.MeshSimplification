@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
-    [AddComponentMenu("Meshia Mesh Simplification/MeshiaMeshSimplifier")]
+    [AddComponentMenu("Meshia Mesh Simplification/Meshia Mesh Simplifier")]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Renderer))]
     public class MeshiaMeshSimplifier : MonoBehaviour
