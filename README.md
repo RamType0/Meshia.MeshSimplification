@@ -22,7 +22,7 @@ Add [my VPM repository](https://ramtype0.github.io/VpmRepository/) to VCC, then 
 
 #### NDMF integration
 
-Attach `NdmfMeshSimplifier` to your models.
+Attach `MeshiaMeshSimplifier` to your models.
 
 You can preview the result in EditMode.
 
@@ -61,7 +61,7 @@ Unity Job Systemで動作するため、Burstと合わせて高速、かつ非�
 
 #### NDMF統合
 
-NDMFがプロジェクトにインポートされている場合、`NdmfMeshSimplifier`が使えます。
+NDMFがプロジェクトにインポートされている場合、`MeshiaMeshSimplifier`が使えます。
 エディターで軽量化結果をプレビューしながらパラメーターの調整ができます。
 
 #### C#から呼び出す
