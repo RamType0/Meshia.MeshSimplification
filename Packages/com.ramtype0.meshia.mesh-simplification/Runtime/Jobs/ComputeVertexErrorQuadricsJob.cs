@@ -16,7 +16,7 @@ namespace Meshia.MeshSimplification
         [ReadOnly]
         public NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
         [ReadOnly]
-        public NativeHashMap<int2, int> EdgeCounts;
+        public NativeHashSet<int2> Edges;
         [ReadOnly]
         public NativeArray<ErrorQuadric> TriangleErrorQuadrics;
         [WriteOnly]
@@ -28,36 +28,27 @@ namespace Meshia.MeshSimplification
             foreach (var triangleIndex in VertexContainingTriangles.GetValuesForKey(vertexIndex))
             {
                 var triangle = Triangles[triangleIndex];
-                var x = triangle.x;
-                var y = triangle.y;
-                var z = triangle.z;
-
-                var edgeA = new int2(math.min(x, y), math.max(x, y));
-                var edgeB = new int2(math.min(y, z), math.max(y, z));
-                var edgeC = new int2(math.min(z, x), math.max(z, x));
 
                 int2x2 belongingEdges;
-                if (vertexIndex == x)
+                if (vertexIndex == triangle.x)
                 {
-                    belongingEdges = new(edgeA, edgeC);
+                    belongingEdges = new(triangle.xy, triangle.zx);
                 }
-                else if (vertexIndex == y)
+                else if (vertexIndex == triangle.y)
                 {
-
-                    belongingEdges = new(edgeA, edgeB);
+                    belongingEdges = new(triangle.xy, triangle.yz);
                 }
-                else if (vertexIndex == z)
+                else if (vertexIndex == triangle.z)
                 {
-                    belongingEdges = new(edgeB, edgeC);
+                    belongingEdges = new(triangle.yz, triangle.zx);
                 }
                 else
                 {
-
                     throw new Exception();
                 }
 
-
-                if (EdgeCounts[belongingEdges.c0] == 1 || EdgeCounts[belongingEdges.c1] == 1)
+                
+                if (!Edges.Contains(belongingEdges.c0.yx) || !Edges.Contains(belongingEdges.c1.yx))
                 {
                     vertexErrorQuadric += new ErrorQuadric(new Plane(math.right(), vertexPosition));
 

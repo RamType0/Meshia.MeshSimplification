@@ -11,20 +11,20 @@ namespace Meshia.MeshSimplification
         [ReadOnly]
         public Mesh.MeshData Mesh;
         [ReadOnly]
-        public NativeHashMap<int2, int> EdgeCounts;
+        public NativeHashSet<int2> Edges;
         public NativeBitArray VertexIsBorderEdgeBits;
         public void Execute()
         {
             VertexIsBorderEdgeBits.Resize(Mesh.vertexCount);
             VertexIsBorderEdgeBits.Clear();
-            foreach (var pair in EdgeCounts)
+            foreach (var pair in Edges)
             {
-                var edge = pair.Key;
-                var count = pair.Value;
-                if (count == 1)
+                var x = pair.x;
+                var y = pair.y;
+                if (!Edges.Contains(new(y, x)))
                 {
-                    VertexIsBorderEdgeBits.Set(edge.x, true);
-                    VertexIsBorderEdgeBits.Set(edge.y, true);
+                    VertexIsBorderEdgeBits.Set(x, true);
+                    VertexIsBorderEdgeBits.Set(y, true);
                 }
             }
         }
