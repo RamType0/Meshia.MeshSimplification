@@ -8,8 +8,10 @@
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "VRCSDKBase.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [
@@ -17,6 +19,11 @@
             "name": "com.vrchat.base",
             "expression": "",
             "define": "ENABLE_VRCHAT_BASE"
+        },
+        {
+            "name": "com.vrchat.worlds",
+            "expression": "",
+            "define": "ENABLE_VRCHAT_WORLDS"
         }
     ],
     "noEngineReferences": false

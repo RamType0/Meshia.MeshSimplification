@@ -69,7 +69,7 @@ namespace Meshia.MeshSimplification
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexMergeOpponentVertices = VertexMergeOpponentVertices,
                 VertexIsBorderEdgeBits = PreserveVertex,
-                VertexMergesPtr = UnsafeMinHeap<VertexMerge>.ConvertExistingListToMinHeap(Merges.GetUnsafeList()),
+                VertexMergesPtr = UnsafeMinPriorityQueue<VertexMerge>.ConvertFromExistingList(Merges.GetUnsafeList()),
                 DiscardedVertex = DiscardedVertex,
                 DiscardedTriangle = DiscardedTriangle,
                 VertexCount = VertexPositionBuffer.Length - DiscardedVertex.CountBits(0, DiscardedVertex.Length),

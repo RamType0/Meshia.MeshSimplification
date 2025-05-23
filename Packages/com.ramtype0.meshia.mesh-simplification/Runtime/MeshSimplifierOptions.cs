@@ -17,13 +17,19 @@ namespace Meshia.MeshSimplification
             VertexLinkColorDistance = 0.01f,
             VertexLinkUvDistance = 0.001f,
         };
+
+        [Tooltip("If you want to suppress hole generation during simplification, enable this option.")]
         public bool PreserveBorderEdges;
         public bool PreserveSurfaceCurvature;
+        [Tooltip("If you find that the texture is distorted, try toggling this option.")]
         public bool UseBarycentricCoordinateInterpolation;
+        [Tooltip("If this option is enabled, vertices that are not originally connected but are close to each other will be included in the first merge candidates. \n" +
+            "Increases the initialization cost.")]
         public bool EnableSmartLink;
         [Range(-1,1)]
         public float MinNormalDot;
-
+        [Tooltip("When smart link is enabled, this is used to select candidates for merging vertices that are not originally connected to each other. \n" +
+            "Increasing this value also increases the initialization cost.")]
         public float VertexLinkDistance;
         [Range(-1, 1)]
         public float VertexLinkMinNormalDot;
