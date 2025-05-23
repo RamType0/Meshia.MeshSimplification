@@ -51,7 +51,7 @@ public class BuildWorldMeshSimplificationHook
 
     private static void RestoreOriginalMeshes()
     {
-        foreach (var ndmfMeshSimplifier in VRC.Tools.FindSceneObjectsOfTypeAll<NdmfMeshSimplifier>())
+        foreach (var ndmfMeshSimplifier in VRC.Tools.FindSceneObjectsOfTypeAll<MeshiaMeshSimplifier>())
         {
             if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter) && meshFilter.sharedMesh != null)
             {
@@ -67,7 +67,7 @@ public class BuildWorldMeshSimplificationHook
 
     private static void BackupOriginalMeshesAndSetSimplifiedMeshes()
     {
-        foreach (var ndmfMeshSimplifier in VRC.Tools.FindSceneObjectsOfTypeAll<NdmfMeshSimplifier>())
+        foreach (var ndmfMeshSimplifier in VRC.Tools.FindSceneObjectsOfTypeAll<MeshiaMeshSimplifier>())
         {
             if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter) && meshFilter.sharedMesh != null)
             {

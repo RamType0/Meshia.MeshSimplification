@@ -8,9 +8,9 @@ using UnityEngine.UIElements;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
-    [CustomEditor(typeof(NdmfMeshSimplifier))]
+    [CustomEditor(typeof(MeshiaMeshSimplifier))]
     [CanEditMultipleObjects]
-    public class NdmfMeshSimplifierEditor : UnityEditor.Editor
+    public class MeshiaMeshSimplifierEditor : UnityEditor.Editor
     {
         [SerializeField]
         VisualTreeAsset visualTreeAsset = null!;
@@ -37,7 +37,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 // But how could we register callback for whether target mesh is currently available?
                 if (targets.Length == 1)
                 {
-                    var ndmfMeshSimplifier = (NdmfMeshSimplifier)target;
+                    var ndmfMeshSimplifier = (MeshiaMeshSimplifier)target;
                     if (TryGetTargetMesh(ndmfMeshSimplifier, out var targetMesh))
                     {
                         if (GUILayout.Button("Bake mesh"))
@@ -65,7 +65,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             return root;
         }
 
-        private static bool TryGetTargetMesh(NdmfMeshSimplifier ndmfMeshSimplifier, [NotNullWhen(true)] out Mesh? targetMesh)
+        private static bool TryGetTargetMesh(MeshiaMeshSimplifier ndmfMeshSimplifier, [NotNullWhen(true)] out Mesh? targetMesh)
         {
             targetMesh = null;
             if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))

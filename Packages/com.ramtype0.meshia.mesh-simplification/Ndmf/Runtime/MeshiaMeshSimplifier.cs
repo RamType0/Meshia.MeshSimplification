@@ -3,10 +3,10 @@ using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
-    [AddComponentMenu("Meshia Mesh Simplification/ NdmfMeshSimplifier")]
+    [AddComponentMenu("Meshia Mesh Simplification/MeshiaMeshSimplifier")]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Renderer))]
-    public class NdmfMeshSimplifier : MonoBehaviour
+    public class MeshiaMeshSimplifier : MonoBehaviour
 #if ENABLE_VRCHAT_BASE
     , VRC.SDKBase.IEditorOnly
 #endif

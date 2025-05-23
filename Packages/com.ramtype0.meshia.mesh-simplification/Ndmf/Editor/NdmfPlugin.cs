@@ -27,7 +27,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 .BeforePlugin("com.anatawa12.avatar-optimizer")
                 .Run("Simplify meshes", ctx =>
                 {
-                    var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<NdmfMeshSimplifier>(true);
+                    var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
                     using(ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
                         foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
@@ -79,7 +79,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
     {
         public ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context)
         {
-            return context.GetComponentsByType<NdmfMeshSimplifier>()
+            return context.GetComponentsByType<MeshiaMeshSimplifier>()
             .Select(ndmfMeshSimplifier => context.GetComponent<Renderer>(ndmfMeshSimplifier.gameObject))
             .Where(renderer => renderer is MeshRenderer or SkinnedMeshRenderer)
             .Select(renderer => RenderGroup.For(renderer))
@@ -88,7 +88,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         public async Task<IRenderFilterNode> Instantiate(RenderGroup group, IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context)
         {
-            var ndmfMeshSimplifier = group.Renderers.First().GetComponent<NdmfMeshSimplifier>();
+            var ndmfMeshSimplifier = group.Renderers.First().GetComponent<MeshiaMeshSimplifier>();
             var targetRenderer = proxyPairs.First().Item2;
             var mesh = targetRenderer switch
             {
