@@ -34,6 +34,8 @@ namespace Meshia.MeshSimplification
         NativeList<float> VertexBlendWeightBuffer;
         NativeList<uint> VertexBlendIndicesBuffer;
 
+        NativeList<uint> VertexContainingSubMeshIndices;
+
         NativeList<ErrorQuadric> VertexErrorQuadrics;
 
         NativeList<int3> Triangles;
@@ -282,6 +284,8 @@ namespace Meshia.MeshSimplification
             VertexBlendWeightBuffer = new(allocator);
             VertexBlendIndicesBuffer = new(allocator);
 
+            VertexContainingSubMeshIndices = new(allocator);
+
             VertexErrorQuadrics = new(allocator);
 
             Triangles = new(allocator);
@@ -328,11 +332,13 @@ namespace Meshia.MeshSimplification
             var constructVertexBlendWeightBuffer = ScheduleCopyVertexBlendWeightBuffer(meshData, dependency);
             var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(meshData, dependency);
 
+            var collectVertexContainingSubMeshIndices = ScheduleCollectVertexContainingSubMeshIndices(meshData, dependency);
+
             var constructTriangles = ScheduleCopyTriangles(meshData, dependency);
 
             var constructVertexContainingTrianglesAndTriangleDiscardedBits = ScheduleInitializeVertexContainingTrianglesAndTriangleIsDiscardedBits(constructTriangles);
 
-            var constructEdgeCounts = ScheduleConstructEdgeCounts(out var edgeCounts, Triangles, constructTriangles, Allocator);
+            var constructEdges = ScheduleConstructEdges(out var edges, Triangles, constructTriangles, Allocator);
 
             var constructVertexIsDiscardedBits = ScheduleInitializeVertexIsDiscardedBits(meshData, dependency, constructVertexContainingTrianglesAndTriangleDiscardedBits);
             var collectSmartLinks = options.EnableSmartLink
@@ -373,21 +379,21 @@ namespace Meshia.MeshSimplification
                 : new JobHandle();
 
 
-            var constructEdges = ScheduleConstructMergePairs(out var edges, edgeCounts, SmartLinks, JobHandle.CombineDependencies(constructEdgeCounts, collectSmartLinks), Allocator);
+            var constructMergePairs = ScheduleConstructMergePairs(out var mergePairs, edges, SmartLinks, JobHandle.CombineDependencies(constructEdges, collectSmartLinks), Allocator);
 
-            var constructVertexIsBorderEdgeBits = ScheduleInitializeVertexIsBorderEdgeBits(meshData, edgeCounts, dependency, constructEdgeCounts);
+            var constructVertexIsBorderEdgeBits = ScheduleInitializeVertexIsBorderEdgeBits(meshData, edges, dependency, constructEdges);
             NativeList<ErrorQuadric> triangleErrorQuadrics = new(Allocator);
             var constructTriangleNormalsAndErrorQuadrics = ScheduleInitializeTriangleNormalsAndTriangleErrorQuadrics(meshData, triangleErrorQuadrics, dependency, constructVertexPositionBuffer, constructTriangles);
 
-            var constructVertexErrorQuadrics = ScheduleInitializeVertexErrorQuadrics(meshData, edgeCounts, triangleErrorQuadrics, dependency, constructVertexPositionBuffer, constructTriangles, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructEdgeCounts, constructTriangleNormalsAndErrorQuadrics);
+            var constructVertexErrorQuadrics = ScheduleInitializeVertexErrorQuadrics(meshData, edges, triangleErrorQuadrics, dependency, constructVertexPositionBuffer, constructTriangles, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructEdges, constructTriangleNormalsAndErrorQuadrics);
 
-            edgeCounts.Dispose(JobHandle.CombineDependencies(constructEdges, constructVertexIsBorderEdgeBits, constructVertexErrorQuadrics));
+            edges.Dispose(JobHandle.CombineDependencies(constructMergePairs, constructVertexIsBorderEdgeBits, constructVertexErrorQuadrics));
 
             triangleErrorQuadrics.Dispose(constructVertexErrorQuadrics);
 
-            var constructVertexMerges = ScheduleInitializeVertexMerges(edges, constructVertexPositionBuffer, constructVertexErrorQuadrics, constructTriangleNormalsAndErrorQuadrics, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructVertexIsBorderEdgeBits, constructEdges);
+            var constructVertexMerges = ScheduleInitializeVertexMerges(mergePairs, constructVertexPositionBuffer, constructVertexErrorQuadrics, constructTriangleNormalsAndErrorQuadrics, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructVertexIsBorderEdgeBits, constructMergePairs);
 
-            edges.Dispose(constructVertexMerges);
+            mergePairs.Dispose(constructVertexMerges);
 
             var constructVertexMergeOpponentVertices = ScheduleInitializeVertexMergeOpponentVertices(constructVertexMerges);
 
@@ -413,6 +419,8 @@ namespace Meshia.MeshSimplification
 
                 constructVertexBlendWeightBuffer,
                 constructVertexBlendIndicesBuffer,
+
+                collectVertexContainingSubMeshIndices,
 
                 constructVertexErrorQuadrics,
 
@@ -467,6 +475,7 @@ namespace Meshia.MeshSimplification
                 BlendShapes = blendShapes,
                 VertexBlendWeightBuffer = VertexBlendWeightBuffer.AsDeferredJobArray(),
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
+                VertexContainingSubMeshIndices = VertexContainingSubMeshIndices.AsDeferredJobArray(),
                 Triangles = Triangles.AsDeferredJobArray(),
                 TriangleNormals = TriangleNormals.AsDeferredJobArray(),
                 VertexContainingTriangles = VertexContainingTriangles,
@@ -507,6 +516,8 @@ namespace Meshia.MeshSimplification
                 VertexBlendWeightBuffer.Dispose(inputDeps),
                 VertexBlendIndicesBuffer.Dispose(inputDeps),
 
+                VertexContainingSubMeshIndices.Dispose(inputDeps),
+
                 VertexErrorQuadrics.Dispose(inputDeps),
                 Triangles.Dispose(inputDeps),
                 TriangleNormals.Dispose(inputDeps),
@@ -541,6 +552,8 @@ namespace Meshia.MeshSimplification
 
             VertexBlendWeightBuffer.Dispose();
             VertexBlendIndicesBuffer.Dispose();
+
+            VertexContainingSubMeshIndices.Dispose();
 
             VertexErrorQuadrics.Dispose();
             Triangles.Dispose();
@@ -604,6 +617,14 @@ namespace Meshia.MeshSimplification
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
             }.Schedule(meshDependency);
         }
+        JobHandle ScheduleCollectVertexContainingSubMeshIndices(Mesh.MeshData mesh, JobHandle meshDependency)
+        {
+            return new CollectVertexContainingSubMeshIndicesJob
+            {
+                Mesh = mesh,
+                VertexContainingSubMeshIndices = VertexContainingSubMeshIndices,
+            }.Schedule(meshDependency);
+        }
         JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
         {
             return new CopyTrianglesJob
@@ -621,13 +642,13 @@ namespace Meshia.MeshSimplification
                 TriangleIsDiscardedBits = TriangleIsDiscardedBits,
             }.Schedule(trianglesDependency);
         }
-        static JobHandle ScheduleConstructEdgeCounts(out NativeHashMap<int2, int> edgeCounts, NativeList<int3> triangles, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        static JobHandle ScheduleConstructEdges(out NativeHashSet<int2> edges, NativeList<int3> triangles, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
         {
-            edgeCounts = new(0, allocator);
-            return new CountEdgesJob
+            edges = new(0, allocator);
+            return new CollectEdgesJob
             {
                 Triangles = triangles.AsDeferredJobArray(),
-                EdgeCounts = edgeCounts,
+                Edges = edges,
             }.Schedule(dependency);
         }
         JobHandle ScheduleInitializeVertexIsDiscardedBits(
@@ -708,25 +729,25 @@ namespace Meshia.MeshSimplification
             subMeshSmartLinkLists.Dispose(collectSmartLinks);
             return collectSmartLinks;
         }
-        static JobHandle ScheduleConstructMergePairs(out NativeList<int2> mergePairs, NativeHashMap<int2, int> edgeCounts, NativeHashSet<int2> smartLinks, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
+        static JobHandle ScheduleConstructMergePairs(out NativeList<int2> mergePairs, NativeHashSet<int2> edges, NativeHashSet<int2> smartLinks, JobHandle dependency, AllocatorManager.AllocatorHandle allocator)
         {
             mergePairs = new(allocator);
-            return new CollectMergePairsAndSmartLinksJob
+            return new CollectMergePairsJob
             {
-                EdgeCounts = edgeCounts,
+                Edges = edges,
                 SmartLinks = smartLinks,
                 MergePairs = mergePairs,
             }.Schedule(dependency);
         }
 
-        JobHandle ScheduleInitializeVertexIsBorderEdgeBits(Mesh.MeshData mesh, NativeHashMap<int2, int> edgeCounts, JobHandle meshDependency, JobHandle edgeCountsDependency)
+        JobHandle ScheduleInitializeVertexIsBorderEdgeBits(Mesh.MeshData mesh, NativeHashSet<int2> edges, JobHandle meshDependency, JobHandle edgesDependency)
         {
             return new MarkBorderEdgeVerticesJob
             {
                 Mesh = mesh,
-                EdgeCounts = edgeCounts,
+                Edges = edges,
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
-            }.Schedule(JobHandle.CombineDependencies(meshDependency, edgeCountsDependency));
+            }.Schedule(JobHandle.CombineDependencies(meshDependency, edgesDependency));
         }
         
         
@@ -774,13 +795,13 @@ namespace Meshia.MeshSimplification
 
         JobHandle ScheduleInitializeVertexErrorQuadrics(
             Mesh.MeshData mesh,
-            NativeHashMap<int2, int> edgeCounts,
+            NativeHashSet<int2> edges,
             NativeList<ErrorQuadric> triangleErrorQuadrics,
             JobHandle meshDependency,
             JobHandle vertexPositionBufferDependency,
             JobHandle trianglesDependency,
             JobHandle vertexContainingTrianglesDependency,
-            JobHandle edgeCountsDependency,
+            JobHandle edgesDependency,
             JobHandle triangleErrorQuadricsDependency)
         {
 
@@ -796,7 +817,7 @@ namespace Meshia.MeshSimplification
                 VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
                 Triangles = Triangles.AsDeferredJobArray(),
                 VertexContainingTriangles = VertexContainingTriangles,
-                EdgeCounts = edgeCounts,
+                Edges = edges,
                 TriangleErrorQuadrics = triangleErrorQuadrics.AsDeferredJobArray(),
                 VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
             }.Schedule(VertexErrorQuadrics, JobsUtility.CacheLineSize,
@@ -805,7 +826,7 @@ namespace Meshia.MeshSimplification
                 vertexPositionBufferDependency,
                 trianglesDependency,
                 vertexContainingTrianglesDependency,
-                edgeCountsDependency,
+                edgesDependency,
                 triangleErrorQuadricsDependency,
                 initializeVertexErrorQuadricsJob,
             }.CombineDependencies());

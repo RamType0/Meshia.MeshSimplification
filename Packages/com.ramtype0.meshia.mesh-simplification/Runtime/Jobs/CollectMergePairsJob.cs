@@ -6,10 +6,10 @@ using Unity.Mathematics;
 namespace Meshia.MeshSimplification
 {
     [BurstCompile]
-    struct CollectMergePairsAndSmartLinksJob : IJob
+    struct CollectMergePairsJob : IJob
     {
         [ReadOnly]
-        public NativeHashMap<int2, int> EdgeCounts;
+        public NativeHashSet<int2> Edges;
         [ReadOnly]
         public NativeHashSet<int2> SmartLinks;
         public NativeList<int2> MergePairs;
@@ -17,7 +17,7 @@ namespace Meshia.MeshSimplification
         public void Execute()
         {
 
-            var maxPairCount = EdgeCounts.Count + SmartLinks.Count;
+            var maxPairCount = Edges.Count + SmartLinks.Count;
 
 
             MergePairs.Clear();
@@ -28,15 +28,29 @@ namespace Meshia.MeshSimplification
 
             foreach (var link in SmartLinks)
             {
-                if (!EdgeCounts.ContainsKey(link))
+                if (!(Edges.Contains(link) || Edges.Contains(link.yx)))
                 {
                     MergePairs.AddNoResize(link);
                 }
             }
 
-            foreach (var pair in EdgeCounts)
+            foreach (var pair in Edges)
             {
-                MergePairs.AddNoResize(pair.Key);
+                var x = pair.x;
+                var y = pair.y;
+                if (pair.x <= pair.y)
+                {
+                    MergePairs.AddNoResize(pair);
+                }
+                else
+                {
+                    if(!Edges.Contains(pair.yx))
+                    {
+                        MergePairs.AddNoResize(pair.yx);
+                    }
+                        
+
+                }
             }
         }
     }

@@ -15,18 +15,15 @@ namespace Meshia.MeshSimplification
             VertexIsDiscardedBits.Resize(Mesh.vertexCount);
 
 
+            for (int vertex = 0; vertex < Mesh.vertexCount; vertex++)
+            {
+                VertexIsDiscardedBits.Set(vertex, !VertexContainingTriangles.ContainsKey(vertex));
+            }
+
             for (int subMeshIndex = 0; subMeshIndex < Mesh.subMeshCount; subMeshIndex++)
             {
                 var subMeshDescriptor = Mesh.GetSubMesh(subMeshIndex);
-                if (subMeshDescriptor.topology is MeshTopology.Triangles)
-                {
-                    var subMeshLastVertex = subMeshDescriptor.firstVertex + subMeshDescriptor.vertexCount;
-                    for (int vertex = subMeshDescriptor.firstVertex; vertex < subMeshLastVertex; vertex++)
-                    {
-                        VertexIsDiscardedBits.Set(vertex, !VertexContainingTriangles.ContainsKey(vertex));
-                    }
-                }
-                else
+                if (subMeshDescriptor.topology is not MeshTopology.Triangles)
                 {
                     VertexIsDiscardedBits.SetBits(subMeshDescriptor.firstVertex, false, subMeshDescriptor.vertexCount);
                 }
