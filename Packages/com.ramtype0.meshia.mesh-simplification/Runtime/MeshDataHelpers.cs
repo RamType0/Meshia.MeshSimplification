@@ -127,7 +127,6 @@ namespace Meshia.MeshSimplification
             var stride = mesh.GetVertexBufferStride(streamIndex);
 
             var sourcePtr = (byte*)stream.GetUnsafeReadOnlyPtr() + offset + stride * firstVertex;
-            { }
             switch (format)
             {
                 case VertexAttributeFormat.Float32:
@@ -146,10 +145,14 @@ namespace Meshia.MeshSimplification
                     {
                         for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                         {
-                            var p = (half*)(sourcePtr + stride * vertexIndex);
+                            var sourceElement = (half*)(sourcePtr + stride * vertexIndex);
                             for (int i = 0; i < dimension; i++)
                             {
-                                value[i] = p[i];
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                Loop.ExpectVectorized();
+#endif
+
+                                value[i] = sourceElement[i];
                             }
                             vertexAttributeData[vertexIndex] = value;
                         }
@@ -159,10 +162,14 @@ namespace Meshia.MeshSimplification
                     {
                         for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                         {
-                            var p = (byte*)(sourcePtr + stride * vertexIndex);
+                            var sourceElement = (byte*)(sourcePtr + stride * vertexIndex);
                             for (int i = 0; i < dimension; i++)
                             {
-                                value[i] = p[i] / (float)byte.MaxValue;
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                Loop.ExpectVectorized();
+#endif
+
+                                value[i] = sourceElement[i] / (float)byte.MaxValue;
                             }
                             vertexAttributeData[vertexIndex] = value;
                         }
@@ -172,10 +179,14 @@ namespace Meshia.MeshSimplification
                     {
                         for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                         {
-                            var p = (sbyte*)(sourcePtr + stride * vertexIndex);
+                            var sourceElement = (sbyte*)(sourcePtr + stride * vertexIndex);
                             for (int i = 0; i < dimension; i++)
                             {
-                                value[i] = math.saturate(p[i] / (float)sbyte.MaxValue);
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                Loop.ExpectVectorized();
+#endif
+
+                                value[i] = math.saturate(sourceElement[i] / (float)sbyte.MaxValue);
                             }
                             vertexAttributeData[vertexIndex] = value;
                         }
@@ -185,10 +196,14 @@ namespace Meshia.MeshSimplification
                     {
                         for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                         {
-                            var p = (ushort*)(sourcePtr + stride * vertexIndex);
+                            var sourceElement = (ushort*)(sourcePtr + stride * vertexIndex);
                             for (int i = 0; i < dimension; i++)
                             {
-                                value[i] = p[i] / (float)ushort.MaxValue;
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                Loop.ExpectVectorized();
+#endif
+
+                                value[i] = sourceElement[i] / (float)ushort.MaxValue;
                             }
                             vertexAttributeData[vertexIndex] = value;
                         }
@@ -198,10 +213,14 @@ namespace Meshia.MeshSimplification
                     {
                         for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                         {
-                            var p = (short*)(sourcePtr + stride * vertexIndex);
+                            var sourceElement = (short*)(sourcePtr + stride * vertexIndex);
                             for (int i = 0; i < dimension; i++)
                             {
-                                value[i] = math.saturate(p[i] / (float)short.MaxValue);
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                Loop.ExpectVectorized();
+#endif
+
+                                value[i] = math.saturate(sourceElement[i] / (float)short.MaxValue);
                             }
                             vertexAttributeData[vertexIndex] = value;
                         }
@@ -233,87 +252,106 @@ namespace Meshia.MeshSimplification
             var stride = mesh.GetVertexBufferStride(streamIndex);
 
             var sourcePtr = (byte*)stream.GetUnsafeReadOnlyPtr() + offset + stride * firstVertex;
-            { }
-            switch (format)
+            fixed (float* destinationPtr = vertexAttributeData)
             {
-                case VertexAttributeFormat.Float32:
-                    {
-                        fixed (float* destinationPtr = vertexAttributeData)
+                switch (format)
+                {
+                    case VertexAttributeFormat.Float32:
                         {
                             UnsafeUtility.MemCpyStride(destinationPtr, sizeof(float) * dimension, sourcePtr, stride, sizeof(float) * dimension, elementCount);
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.Float16:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.Float16:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (half*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                             {
-                                value[i] = p[i];
+                                var sourceElement = (half*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+
+                                    destinationElement[i] = sourceElement[i];
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.UNorm8:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.UNorm8:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (byte*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                             {
-                                value[i] = p[i] / (float)byte.MaxValue;
+                                var sourceElement = (byte*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+
+                                    destinationElement[i] = sourceElement[i] / (float)byte.MaxValue;
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.SNorm8:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.SNorm8:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (sbyte*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                             {
-                                value[i] = math.saturate(p[i] / (float)sbyte.MaxValue);
+                                var sourceElement = (sbyte*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+
+                                    destinationElement[i] = math.saturate(sourceElement[i] / (float)sbyte.MaxValue);
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.UNorm16:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.UNorm16:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (ushort*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                             {
-                                value[i] = p[i] / (float)ushort.MaxValue;
+                                var sourceElement = (ushort*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+
+                                    destinationElement[i] = sourceElement[i] / (float)ushort.MaxValue;
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.SNorm16:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.SNorm16:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (short*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeData.Length; vertexIndex++)
                             {
-                                value[i] = math.saturate(p[i] / (float)short.MaxValue);
+                                var sourceElement = (short*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+                                    destinationElement[i] = math.saturate(sourceElement[i] / (float)short.MaxValue);
+                                }
                             }
                         }
-                    }
-                    break;
-                default:
-                    throw new NotSupportedException($"The assigned {nameof(VertexAttributeFormat)} is not supported yet.");
+                        break;
+                    default:
+                        throw new NotSupportedException($"The assigned {nameof(VertexAttributeFormat)} is not supported yet.");
+                }
+
+
+
             }
-
-
 
 
         }
@@ -335,72 +373,85 @@ namespace Meshia.MeshSimplification
             var stride = mesh.GetVertexBufferStride(streamIndex);
 
             var sourcePtr = (byte*)stream.GetUnsafeReadOnlyPtr() + offset + stride * firstVertex;
-
-            switch (format)
+            fixed (int* destinationPtr = vertexAttributeData)
             {
-                case VertexAttributeFormat.UInt8:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
+
+                switch (format)
+                {
+                    case VertexAttributeFormat.UInt8:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (byte*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
                             {
-                                value[i] = p[i];
+                                var sourceElement = (byte*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+                                    destinationElement[i] = sourceElement[i];
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.SInt8:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.SInt8:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (sbyte*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
                             {
-                                value[i] = p[i];
+                                var sourceElement = (sbyte*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+                                    destinationElement[i] = sourceElement[i];
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.UInt16:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.UInt16:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (ushort*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
                             {
-                                value[i] = p[i];
+                                var sourceElement = (ushort*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+                                    destinationElement[i] = sourceElement[i];
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.SInt16:
-                    {
-                        for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
+                        break;
+                    case VertexAttributeFormat.SInt16:
                         {
-                            var value = vertexAttributeData.Slice(dimension * vertexIndex, dimension);
-                            var p = (short*)(sourcePtr + stride * vertexIndex);
-                            for (int i = 0; i < dimension; i++)
+                            for (int vertexIndex = 0; vertexIndex < vertexAttributeElementCount; vertexIndex++)
                             {
-                                value[i] = p[i];
+                                var sourceElement = (short*)(sourcePtr + stride * vertexIndex);
+                                var destinationElement = destinationPtr + dimension * vertexIndex;
+                                for (int i = 0; i < dimension; i++)
+                                {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                                    Loop.ExpectVectorized();
+#endif
+                                    destinationElement[i] = sourceElement[i];
+                                }
                             }
                         }
-                    }
-                    break;
-                case VertexAttributeFormat.UInt32:
-                case VertexAttributeFormat.SInt32:
-                    {
-                        fixed (int* destinationPtr = vertexAttributeData)
+                        break;
+                    case VertexAttributeFormat.UInt32:
+                    case VertexAttributeFormat.SInt32:
                         {
                             UnsafeUtility.MemCpyStride(destinationPtr, sizeof(int) * dimension, sourcePtr, stride, sizeof(int) * dimension, vertexAttributeElementCount);
                         }
-                    }
-                    break;
-                default:
-                    throw new NotSupportedException($"The assigned {nameof(VertexAttributeFormat)} is not supported yet.");
+                        break;
+                    default:
+                        throw new NotSupportedException($"The assigned {nameof(VertexAttributeFormat)} is not supported yet.");
+                }
+
             }
         }
 

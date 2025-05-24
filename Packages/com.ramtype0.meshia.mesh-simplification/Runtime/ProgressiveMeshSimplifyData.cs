@@ -1215,6 +1215,7 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < dimension; i++)
                         {
+                            // This loop is optimized away instead of vectorized
                             vertexComponents[i] = value[i];
                         }
 
@@ -1226,6 +1227,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < dimension; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (half)value[i];
                         }
 
@@ -1237,6 +1242,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < dimension; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (byte)(value[i] * byte.MaxValue);
                         }
 
@@ -1248,6 +1257,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < dimension; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (sbyte)(value[i] * sbyte.MaxValue);
                         }
 
@@ -1258,6 +1271,10 @@ namespace Meshia.MeshSimplification
                         var vertexComponents = (ushort*)ptr;
                         for (int i = 0; i < dimension; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (ushort)(value[i] * ushort.MaxValue);
                         }
                     }
@@ -1267,6 +1284,10 @@ namespace Meshia.MeshSimplification
                         var vertexComponents = (short*)ptr;
                         for (int i = 0; i < dimension; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (short)(value[i] * short.MaxValue);
                         }
 
@@ -1287,6 +1308,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = value[i];
                         }
 
@@ -1298,6 +1323,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (half)value[i];
                         }
 
@@ -1309,6 +1338,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (byte)(value[i] * byte.MaxValue);
                         }
 
@@ -1320,6 +1353,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (sbyte)(value[i] * sbyte.MaxValue);
                         }
 
@@ -1330,6 +1367,10 @@ namespace Meshia.MeshSimplification
                         var vertexComponents = (ushort*)ptr;
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (ushort)(value[i] * ushort.MaxValue);
                         }
                     }
@@ -1339,6 +1380,10 @@ namespace Meshia.MeshSimplification
                         var vertexComponents = (short*)ptr;
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (short)(value[i] * short.MaxValue);
                         }
 
@@ -1360,6 +1405,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (byte)value[i];
                         }
                     }
@@ -1370,6 +1419,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (sbyte)value[i];
                         }
                     }
@@ -1380,6 +1433,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (ushort)value[i];
                         }
                     }
@@ -1390,6 +1447,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (short)value[i];
                         }
                     }
@@ -1400,6 +1461,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (uint)value[i];
                         }
                     }
@@ -1410,6 +1475,10 @@ namespace Meshia.MeshSimplification
 
                         for (int i = 0; i < value.Length; i++)
                         {
+#if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
+                            Loop.ExpectVectorized();
+#endif
+
                             vertexComponents[i] = (int)value[i];
                         }
                     }

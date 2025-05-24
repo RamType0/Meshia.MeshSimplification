@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NUnit.Framework;
+using System;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 namespace Meshia.MeshSimplification
@@ -8,8 +10,9 @@ namespace Meshia.MeshSimplification
         public static unsafe ref T ElementAt<T>(this NativeArray<T> array, int i)
             where T : unmanaged
         {
-            if ((uint)i < (uint)array.Length)
+            if (Hint.Likely((uint)i < (uint)array.Length))
             {
+                
                 return ref ((T*)array.GetUnsafePtr())[i];
             }
             else
