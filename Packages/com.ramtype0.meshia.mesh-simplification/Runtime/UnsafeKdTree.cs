@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
@@ -56,6 +57,7 @@ namespace Meshia.MeshSimplification
                 second = new(list.Ptr + mid + 1, list.Length - mid - 1);
             }
         }
+        [return: AssumeRange(0, int.MaxValue - 1)]
         int AllocateNode() => Nodes.Length++;
         void InitializeNode(ReadOnlySpan<float3> points, int nodeIndex, UnsafeList<int> indices, int nodeDepth)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
@@ -9,10 +10,13 @@ namespace Meshia.MeshSimplification
 {
     internal static class MeshDataHelpers
     {
+
+        [return: AssumeRange(0, int.MaxValue)]
         public static int GetIndexCount(this Mesh.MeshData mesh)
         {
             return mesh.indexFormat == IndexFormat.UInt16 ? mesh.GetIndexData<ushort>().Length : mesh.GetIndexData<uint>().Length;
         }
+        [return: AssumeRange(0, int.MaxValue / 3)]
         public static int GetTriangleCount(this Mesh.MeshData mesh)
         {
             var indexCount = 0;
@@ -26,7 +30,11 @@ namespace Meshia.MeshSimplification
             }
             return indexCount / 3;
         }
+        [return: AssumeRange(0, 4 * 4)]
         public static int GetVertexAttributeSize(this Mesh.MeshData mesh, VertexAttribute vertexAttribute) => GetVertexAttributeSize(mesh.GetVertexAttributeFormat(vertexAttribute), mesh.GetVertexAttributeDimension(vertexAttribute));
+
+
+        [return: AssumeRange(1, 4)]
         unsafe static int GetVertexAttributeSize(VertexAttributeFormat format, int dimension)
         {
             var componentSize = format switch

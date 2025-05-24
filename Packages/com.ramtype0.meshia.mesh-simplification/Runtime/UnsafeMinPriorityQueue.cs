@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
@@ -128,11 +129,13 @@ namespace Meshia.MeshSimplification
         /// <summary>
         /// Gets the index of an element's parent.
         /// </summary>
+        [return: AssumeRange(0, (int.MaxValue - 1) >> Log2Arity)]
         private static int GetParentIndex(int index) => (index - 1) >> Log2Arity;
 
         /// <summary>
         /// Gets the index of the first child of an element.
         /// </summary>
+        [return: AssumeRange(1, int.MaxValue)]
         private static int GetFirstChildIndex(int index) => (index << Log2Arity) + 1;
         /// <summary>
         /// Converts an unordered list into a heap.
