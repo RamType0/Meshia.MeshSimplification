@@ -1,6 +1,7 @@
 using Unity.Burst;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 
@@ -26,14 +27,17 @@ namespace Meshia.MeshSimplification
         {
             var subMesh = Mesh.GetSubMesh(subMeshIndex);
             uint bit = 1u << subMeshIndex;
-            for (int vertexIndex = subMesh.firstVertex, endIndex = subMesh.firstVertex + subMesh.vertexCount; vertexIndex < endIndex; vertexIndex++)
+
+            var subMeshVertexContainingSubMeshIndices = VertexContainingSubMeshIndices.AsArray().GetSubArray(subMesh.firstVertex, subMesh.vertexCount).AsSpan();
+
+            for (int subMeshVertexIndex = 0; subMeshVertexIndex < subMeshVertexContainingSubMeshIndices.Length; subMeshVertexIndex++)
             {
 #if UNITY_BURST_EXPERIMENTAL_LOOP_INTRINSICS
                 Loop.ExpectVectorized();
 #endif
-                ref var vertexSubMeshIndex = ref VertexContainingSubMeshIndices.ElementAt(vertexIndex);
-                vertexSubMeshIndex |= bit;
+                subMeshVertexContainingSubMeshIndices[subMeshVertexIndex] |= bit;
             }
+
         }
     }
 }
