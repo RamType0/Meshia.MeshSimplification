@@ -39,7 +39,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             foreach (var newRenderer in newRenderers)
             {
-                if (!OverallMeshiaMeshSimplifierTarget.IsValidForTarget(newRenderer)) continue;
+                if (!OverallMeshiaMeshSimplifierTarget.IsValidTarget(newRenderer)) continue;
 
                 var target = new OverallMeshiaMeshSimplifierTarget(newRenderer);
                 if (IsEditorOnlyInHierarchy(newRenderer.gameObject)) target.State = OverallMeshiaMeshSimplifierTargetState.EditorOnly;
