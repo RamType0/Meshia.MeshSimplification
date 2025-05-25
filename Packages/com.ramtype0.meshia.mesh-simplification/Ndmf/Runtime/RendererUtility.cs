@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf
@@ -16,7 +17,7 @@ namespace Meshia.MeshSimplification.Ndmf
                 case SkinnedMeshRenderer skinnedMeshRenderer:
                     return skinnedMeshRenderer.sharedMesh;
                 default:
-                    return null;
+                    throw new ArgumentException("Could not find target property to get mesh.");
             }
         } 
         
@@ -33,7 +34,7 @@ namespace Meshia.MeshSimplification.Ndmf
                     skinnedMeshRenderer.sharedMesh = mesh;
                     break;
                 default:
-                    break;
+                    throw new ArgumentException("Could not find target property to set mesh.");
             }
         }
     }
