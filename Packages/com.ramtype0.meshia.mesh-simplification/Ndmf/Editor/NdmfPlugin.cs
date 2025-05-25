@@ -1,13 +1,8 @@
 #if ENABLE_NDMF
 
 using Meshia.MeshSimplification.Ndmf.Editor;
+using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using nadena.dev.ndmf;
-using nadena.dev.ndmf.preview;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -68,91 +63,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 UnityEngine.Object.DestroyImmediate(ndmfMeshSimplifier);
                             }
                         }
-
                     }
-
-                }).PreviewingWith(new NdmfMeshSimplifierPreviewer())
+                }).PreviewingWith(new MeshiaMeshSimplifierPreview())
             ;
         }
-    }
-    class NdmfMeshSimplifierPreviewer : IRenderFilter
-    {
-        public ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context)
-        {
-            return context.GetComponentsByType<MeshiaMeshSimplifier>()
-            .Select(ndmfMeshSimplifier => context.GetComponent<Renderer>(ndmfMeshSimplifier.gameObject))
-            .Where(renderer => renderer is MeshRenderer or SkinnedMeshRenderer)
-            .Select(renderer => RenderGroup.For(renderer))
-            .ToImmutableList();
-        }
-
-        public async Task<IRenderFilterNode> Instantiate(RenderGroup group, IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context)
-        {
-            var ndmfMeshSimplifier = group.Renderers.First().GetComponent<MeshiaMeshSimplifier>();
-            var targetRenderer = proxyPairs.First().Item2;
-            var mesh = targetRenderer switch
-            {
-                SkinnedMeshRenderer skinnedMeshRenderer => skinnedMeshRenderer.sharedMesh,
-                MeshRenderer meshRenderer => meshRenderer.TryGetComponent<MeshFilter>(out var meshFilter) ? meshFilter.sharedMesh : null,
-                _ => null,
-            };
-
-            if (mesh == null)
-            {
-                return null;
-            }
-            context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.target, (x, y) => x == y);
-            context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.options, (x, y) => x == y);
-            context.Observe(mesh);
-
-            Mesh simplifiedMesh = new();
-            try
-            {
-                await MeshSimplifier.SimplifyAsync(mesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
-            }
-            catch (Exception)
-            {
-                UnityEngine.Object.DestroyImmediate(simplifiedMesh);
-                throw;
-            }
-            return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
-        }
-
-
-    }
-    class NdmfMeshSimplifierPreviewNode : IRenderFilterNode
-    {
-        public RenderAspects WhatChanged => RenderAspects.Mesh;
-
-        Mesh simplifiedMesh;
-
-        public NdmfMeshSimplifierPreviewNode(Mesh mesh)
-        {
-            simplifiedMesh = mesh;
-        }
-
-        public void OnFrame(Renderer original, Renderer proxy)
-        {
-            switch (proxy)
-            {
-                case SkinnedMeshRenderer skinnedMeshRenderer:
-                    {
-                        skinnedMeshRenderer.sharedMesh = simplifiedMesh;
-                    }
-                    break;
-                case MeshRenderer meshRenderer:
-                    {
-                        if (meshRenderer.TryGetComponent<MeshFilter>(out var meshFilter))
-                        {
-                            meshFilter.sharedMesh = simplifiedMesh;
-                        }
-                    }
-                    break;
-            }
-        }
-
-        void IDisposable.Dispose() => UnityEngine.Object.DestroyImmediate(simplifiedMesh);
-
     }
 }
 
