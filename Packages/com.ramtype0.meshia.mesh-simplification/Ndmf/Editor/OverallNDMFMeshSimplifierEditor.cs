@@ -8,22 +8,22 @@ using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
-    [CustomEditor(typeof(OverallMeshiaMeshSimplifier))]
-    internal class OverallMeshiaMeshSimplifierEditor : UnityEditor.Editor
+    [CustomEditor(typeof(MeshiaCascadingMeshSimplifier))]
+    internal class MeshiaCascadingMeshSimplifierEditor : UnityEditor.Editor
     {
         private SerializedProperty _isAutoAdjust;
         private SerializedProperty _targetTriangleCount;
         private SerializedProperty _simplifierTargets;
 
-        private OverallMeshiaMeshSimplifier _component;
+        private MeshiaCascadingMeshSimplifier _component;
 
         private void OnEnable()
         {
-            _isAutoAdjust = serializedObject.FindProperty(nameof(OverallMeshiaMeshSimplifier.IsAutoAdjust));
-            _targetTriangleCount = serializedObject.FindProperty(nameof(OverallMeshiaMeshSimplifier.TargetTriangleCount));
-            _simplifierTargets = serializedObject.FindProperty(nameof(OverallMeshiaMeshSimplifier.Targets));
+            _isAutoAdjust = serializedObject.FindProperty(nameof(MeshiaCascadingMeshSimplifier.IsAutoAdjust));
+            _targetTriangleCount = serializedObject.FindProperty(nameof(MeshiaCascadingMeshSimplifier.TargetTriangleCount));
+            _simplifierTargets = serializedObject.FindProperty(nameof(MeshiaCascadingMeshSimplifier.Targets));
             
-            _component = target as OverallMeshiaMeshSimplifier;
+            _component = target as MeshiaCascadingMeshSimplifier;
             AssginTarget();            
         }
 
@@ -39,10 +39,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             foreach (var newRenderer in newRenderers)
             {
-                if (!OverallMeshiaMeshSimplifierTarget.IsValidTarget(newRenderer)) continue;
+                if (!MeshiaCascadingMeshSimplifierTarget.IsValidTarget(newRenderer)) continue;
 
-                var target = new OverallMeshiaMeshSimplifierTarget(newRenderer);
-                if (IsEditorOnlyInHierarchy(newRenderer.gameObject)) target.State = OverallMeshiaMeshSimplifierTargetState.EditorOnly;
+                var target = new MeshiaCascadingMeshSimplifierTarget(newRenderer);
+                if (IsEditorOnlyInHierarchy(newRenderer.gameObject)) target.State = MeshiaCascadingMeshSimplifierTargetState.EditorOnly;
                 _component.Targets.Add(target);
             }
         }
@@ -69,7 +69,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             EditorGUILayout.Space();
             TargetGUI();
             EditorGUILayout.Space();
-            TogglePreviewGUI(OverallMeshiaMeshSimplifierPreview.ToggleNode);
+            TogglePreviewGUI(MeshiaCascadingMeshSimplifierPreview.ToggleNode);
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -126,7 +126,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                var current = enabledTargets.Sum(t => t.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount)).intValue)
+                var current = enabledTargets.Sum(t => t.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount)).intValue)
                     + disabledTargets.Sum(t => GetTotalTriangleCount(t));
                 var sum = enabledTargets.Concat(disabledTargets).Sum(t => GetTotalTriangleCount(t));
                 var countLabel = $"Current: {current} / {sum}";
@@ -148,11 +148,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             for (int i = 0; i < enabledTargets.Count; i++)
             {
                 var enabledTarget = enabledTargets[i];
-                var state = enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.State));
-                var renderer = enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer));
-                var targetTriangleCount = enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount));
+                var state = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.State));
+                var renderer = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
+                var targetTriangleCount = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount));
                 var totalTriangleCount = GetTotalTriangleCount(enabledTarget);
-                var fixedValue = enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Fixed));
+                var fixedValue = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Fixed));
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -176,7 +176,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             bool warnEditorOnly = editorOnlyTargets.Any(editorOnlyTarget =>
             {
-                var renderer = editorOnlyTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer));
+                var renderer = editorOnlyTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
                 return !IsEditorOnlyInHierarchy((renderer.objectReferenceValue as Renderer).gameObject);
             });
             using (new EditorGUILayout.HorizontalScope())
@@ -195,11 +195,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var otherTargets = disabledTargets.Concat(editorOnlyTargets);
                 foreach (var otherTarget in otherTargets)
                 {
-                    var state = otherTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.State));
-                    var renderer = otherTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer));
+                    var state = otherTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.State));
+                    var renderer = otherTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
                     var totalTriangleCount = GetTotalTriangleCount(otherTarget);
 
-                    var IsEditorOnly = state.intValue == (int)OverallMeshiaMeshSimplifierTargetState.EditorOnly;
+                    var IsEditorOnly = state.intValue == (int)MeshiaCascadingMeshSimplifierTargetState.EditorOnly;
                     var suspicious = IsEditorOnly && !IsEditorOnlyInHierarchy((renderer.objectReferenceValue as Renderer).gameObject);
                     
                     var defaultBackgroundColor = GUI.backgroundColor;
@@ -225,8 +225,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             if (_currentSimplifySettingTarget != null)
             {
-                var renderer = _currentSimplifySettingTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer));
-                var options = _currentSimplifySettingTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Options));
+                var renderer = _currentSimplifySettingTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
+                var options = _currentSimplifySettingTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Options));
                 
                 _showCurrentSimplifySetting = EditorGUILayout.Foldout(_showCurrentSimplifySetting, $"Simplifier Options for {renderer?.objectReferenceValue?.name}");
                 if (_showCurrentSimplifySetting)
@@ -269,19 +269,19 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             for (int i = 0; i < _simplifierTargets.arraySize; i++)
             {
                 var simplifierTarget = _simplifierTargets.GetArrayElementAtIndex(i);
-                var renderer = simplifierTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer));
+                var renderer = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
                 if (renderer.objectReferenceValue == null) continue;
-                var state = simplifierTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.State));
+                var state = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.State));
 
                 switch (state.intValue)
                 {
-                    case (int)OverallMeshiaMeshSimplifierTargetState.Enabled:
+                    case (int)MeshiaCascadingMeshSimplifierTargetState.Enabled:
                         enabledTargets.Add(simplifierTarget);
                         break;
-                    case (int)OverallMeshiaMeshSimplifierTargetState.Disabled:
+                    case (int)MeshiaCascadingMeshSimplifierTargetState.Disabled:
                         disabledTargets.Add(simplifierTarget);
                         break;
-                    case (int)OverallMeshiaMeshSimplifierTargetState.EditorOnly:
+                    case (int)MeshiaCascadingMeshSimplifierTargetState.EditorOnly:
                         editorOnlyTargets.Add(simplifierTarget);
                         break;
                 }
@@ -291,16 +291,16 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         private static int GetTotalTriangleCount(SerializedProperty targetProp)
         {
-            var renderer = targetProp.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Renderer)).objectReferenceValue as Renderer;
+            var renderer = targetProp.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer)).objectReferenceValue as Renderer;
             if (renderer == null) return 0;
 
-            if (OverallMeshiaMeshSimplifierPreview.TriangleCountCache.TryGetValue(renderer, out var triCount))
+            if (MeshiaCascadingMeshSimplifierPreview.TriangleCountCache.TryGetValue(renderer, out var triCount))
             {
                 return triCount.proxy;
             }
             else
             {
-                return targetProp.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount)).intValue;
+                return targetProp.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount)).intValue;
             }
         }
 
@@ -325,10 +325,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var unadjustablecount = 0;
             foreach (var enabledTarget in enabledTargets)
             {
-                var fixedValue = enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Fixed)).boolValue;
+                var fixedValue = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Fixed)).boolValue;
 
                 if (!fixedValue && !SerializedProperty.DataEquals(fixedProperty, enabledTarget)) adjustableTargets.Add(enabledTarget);
-                else unadjustablecount += enabledTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount)).intValue;
+                else unadjustablecount += enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount)).intValue;
             }
             unadjustablecount += disabledTargets.Sum(t => GetTotalTriangleCount(t));
 
@@ -339,11 +339,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 return;
             }
 
-            var adjustableRatio = (float)actualTargetCount / adjustableTargets.Sum(t => t.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount)).intValue);
+            var adjustableRatio = (float)actualTargetCount / adjustableTargets.Sum(t => t.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount)).intValue);
 
             foreach (var adjustableTarget in adjustableTargets)
             {
-                var targetTriangleCount = adjustableTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount));
+                var targetTriangleCount = adjustableTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount));
                 var totalTriangleCount = GetTotalTriangleCount(adjustableTarget);
                 targetTriangleCount.intValue = (int)(targetTriangleCount.intValue * adjustableRatio);
                 if (targetTriangleCount.intValue > totalTriangleCount)
@@ -352,13 +352,13 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 }
             }
             
-            var overflow = adjustableTargets.Sum(t => t.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount)).intValue) - actualTargetCount;
+            var overflow = adjustableTargets.Sum(t => t.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount)).intValue) - actualTargetCount;
 
             while (overflow > 0 && adjustableTargets.Any())
             {
                 foreach (var adjustableTarget in adjustableTargets)
                 {
-                    var targetTriangleCount = adjustableTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount));
+                    var targetTriangleCount = adjustableTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount));
                     var totalTriangleCount = GetTotalTriangleCount(adjustableTarget);
 
                     if (targetTriangleCount.intValue < totalTriangleCount)
@@ -378,12 +378,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             for (int i = 0; i < _simplifierTargets.arraySize; i++)
             {
                 var simplifierTarget = _simplifierTargets.GetArrayElementAtIndex(i);
-                var state = simplifierTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.State));
-                var fixedValue = simplifierTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.Fixed));
-                var targetTriangleCount = simplifierTarget.FindPropertyRelative(nameof(OverallMeshiaMeshSimplifierTarget.TargetTriangleCount));
+                var state = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.State));
+                var fixedValue = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Fixed));
+                var targetTriangleCount = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount));
                 var totalTriangleCount = GetTotalTriangleCount(simplifierTarget);
 
-                if (state.intValue == (int)OverallMeshiaMeshSimplifierTargetState.Enabled && !fixedValue.boolValue)
+                if (state.intValue == (int)MeshiaCascadingMeshSimplifierTargetState.Enabled && !fixedValue.boolValue)
                 {
                     targetTriangleCount.intValue = (int)(totalTriangleCount * ratio);
                 }

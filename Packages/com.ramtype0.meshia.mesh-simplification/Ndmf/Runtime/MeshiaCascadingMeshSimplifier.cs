@@ -6,31 +6,31 @@ using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
-    public class OverallMeshiaMeshSimplifier : MonoBehaviour
+    public class MeshiaCascadingMeshSimplifier : MonoBehaviour
 #if ENABLE_VRCHAT_BASE
     , VRC.SDKBase.IEditorOnly
 #endif
     {
-        public List<OverallMeshiaMeshSimplifierTarget> Targets = new();
+        public List<MeshiaCascadingMeshSimplifierTarget> Targets = new();
         public int TargetTriangleCount = 70000;
         public bool IsAutoAdjust = false;
     }
 
     [Serializable]
-    public record OverallMeshiaMeshSimplifierTarget
+    public record MeshiaCascadingMeshSimplifierTarget
     {
         public Renderer Renderer;
         public int TargetTriangleCount;
         public MeshSimplifierOptions Options;
-        public OverallMeshiaMeshSimplifierTargetState State;
+        public MeshiaCascadingMeshSimplifierTargetState State;
         public bool Fixed;
 
-        public OverallMeshiaMeshSimplifierTarget(Renderer renderer)
+        public MeshiaCascadingMeshSimplifierTarget(Renderer renderer)
         {
             Renderer = renderer;
             TargetTriangleCount = MeshDataHelpers.GetTriangleCount(RendererUtility.GetMesh(renderer)!);
             Options = MeshSimplifierOptions.Default;
-            State = OverallMeshiaMeshSimplifierTargetState.Enabled;
+            State = MeshiaCascadingMeshSimplifierTargetState.Enabled;
             Fixed = false;
         }
 
@@ -45,10 +45,10 @@ namespace Meshia.MeshSimplification.Ndmf
         }
 
         public bool IsValid() => IsValidTarget(Renderer);
-        public bool Enabled() => State == OverallMeshiaMeshSimplifierTargetState.Enabled;
+        public bool Enabled() => State == MeshiaCascadingMeshSimplifierTargetState.Enabled;
     }
 
-    public enum OverallMeshiaMeshSimplifierTargetState
+    public enum MeshiaCascadingMeshSimplifierTargetState
     {
         Enabled,
         Disabled,
