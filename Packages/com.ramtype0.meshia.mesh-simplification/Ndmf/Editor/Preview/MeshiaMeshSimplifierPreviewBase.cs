@@ -80,7 +80,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 
         public void OnFrame(Renderer original, Renderer proxy)
         {
-            RendererUtility.AssignMesh(proxy, _simplifiedMesh);
+            RendererUtility.SetMesh(proxy, _simplifiedMesh);
         }
 
         void IDisposable.Dispose() => UnityEngine.Object.DestroyImmediate(_simplifiedMesh);

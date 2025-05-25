@@ -81,7 +81,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                     var renderer = overallTarget.Renderer!;
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
-                                    RendererUtility.AssignMesh(renderer, simplifiedMesh);
+                                    RendererUtility.SetMesh(renderer, simplifiedMesh);
 
                                     UnityEngine.Object.DestroyImmediate(overallMeshiaMeshSimplifier);
                                 }

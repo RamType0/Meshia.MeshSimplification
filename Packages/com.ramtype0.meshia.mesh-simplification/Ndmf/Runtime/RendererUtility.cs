@@ -20,7 +20,7 @@ namespace Meshia.MeshSimplification.Ndmf
             }
         } 
         
-        public static void AssignMesh(Renderer renderer, Mesh mesh)
+        public static void SetMesh(Renderer renderer, Mesh mesh)
         {
             switch (renderer)
             {
