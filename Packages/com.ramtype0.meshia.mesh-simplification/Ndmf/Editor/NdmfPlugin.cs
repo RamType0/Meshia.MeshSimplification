@@ -23,7 +23,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 .Run("Simplify meshes", ctx =>
                 {
                     var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
-                    var overallMeshiaMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<OverallMeshiaMeshSimplifier>(true);
+                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingMeshSimplifier>(true);
                     using(ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
                         foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
@@ -41,14 +41,14 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
                             }
                         }
-                        foreach (var overallMeshiaMeshSimplifier in overallMeshiaMeshSimplifiers)
+                        foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                         {
-                            foreach (var overallTarget in overallMeshiaMeshSimplifier.Targets)
+                            foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                             {
-                                if (!overallTarget.IsValid() || !overallTarget.Enabled()) continue;
-                                var mesh = RendererUtility.GetMesh(overallTarget.Renderer)!;
-                                var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = overallTarget.TargetTriangleCount };
-                                parameters.Add((mesh, target, overallTarget.Options, mesh));
+                                if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
+                                var mesh = RendererUtility.GetMesh(cascadingTarget.Renderer)!;
+                                var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
+                                parameters.Add((mesh, target, cascadingTarget.Options, mesh));
                             }
                         }
 
@@ -73,22 +73,22 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                                 UnityEngine.Object.DestroyImmediate(ndmfMeshSimplifier);
                             }
-                            foreach (var overallMeshiaMeshSimplifier in overallMeshiaMeshSimplifiers)
+                            foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                             {
-                                foreach (var overallTarget in overallMeshiaMeshSimplifier.Targets)
+                                foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                                 {
-                                    if (!overallTarget.IsValid() || !overallTarget.Enabled()) continue;
-                                    var renderer = overallTarget.Renderer!;
+                                    if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
+                                    var renderer = cascadingTarget.Renderer!;
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
-                                    UnityEngine.Object.DestroyImmediate(overallMeshiaMeshSimplifier);
+                                    UnityEngine.Object.DestroyImmediate(cascadingMeshSimplifier);
                                 }
                             }
                         }
                     }
-                }).PreviewingWith(new MeshiaMeshSimplifierPreview(), new OverallMeshiaMeshSimplifierPreview())
+                }).PreviewingWith(new MeshiaMeshSimplifierPreview(), new MeshiaCascadingMeshSimplifierPreview())
             ;
         }
     }
