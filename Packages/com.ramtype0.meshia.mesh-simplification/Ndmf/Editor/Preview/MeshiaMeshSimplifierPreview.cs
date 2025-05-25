@@ -14,6 +14,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             return context.GetComponentsByType<MeshiaMeshSimplifier>()
             .Select(ndmfMeshSimplifier => context.GetComponent<Renderer>(ndmfMeshSimplifier.gameObject))
             .Where(renderer => renderer is MeshRenderer or SkinnedMeshRenderer)
+            .Where(renderer => context.ActiveInHierarchy(renderer.gameObject))
             .Select(renderer => RenderGroup.For(renderer))
             .ToImmutableList();
         }
@@ -22,8 +23,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             var ndmfMeshSimplifier = original.GetComponent<MeshiaMeshSimplifier>();
             var target = context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.target, (x, y) => x == y);
             var options = context.Observe(ndmfMeshSimplifier, ndmfMeshSimplifier => ndmfMeshSimplifier.options, (x, y) => x == y);
-            var mesh = RendererUtility.GetMesh(proxy);
-            context.Observe(mesh);
             return (target, options);
         }
     }
