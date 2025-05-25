@@ -60,7 +60,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
                 throw;
             }
 
-            TriangleCountCache[original] = (proxyMesh.triangles.Length / 3, simplifiedMesh.triangles.Length / 3);
+            TriangleCountCache[original] = (MeshDataHelpers.GetTriangleCount(proxyMesh), MeshDataHelpers.GetTriangleCount(simplifiedMesh));
 
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
         }

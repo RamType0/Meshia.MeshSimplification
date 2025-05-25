@@ -31,6 +31,19 @@ namespace Meshia.MeshSimplification
             }
             return indexCount / 3;
         }
+        public static int GetTriangleCount(this Mesh mesh)
+        {
+            var indexCount = 0;
+            for (int subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++)
+            {
+                var subMesh = mesh.GetSubMesh(subMeshIndex);
+                if (subMesh.topology == MeshTopology.Triangles)
+                {
+                    indexCount += subMesh.indexCount;
+                }
+            }
+            return indexCount / 3;
+        }
         [return: AssumeRange(0, 4 * 4)]
         public static int GetVertexAttributeSize(this Mesh.MeshData mesh, VertexAttribute vertexAttribute) => GetVertexAttributeSize(mesh.GetVertexAttributeFormat(vertexAttribute), mesh.GetVertexAttributeDimension(vertexAttribute));
 
