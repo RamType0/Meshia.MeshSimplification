@@ -34,7 +34,7 @@ namespace Meshia.MeshSimplification.Ndmf
             Fixed = false;
         }
 
-        public static bool IsValidForTarget(Renderer renderer)
+        public static bool IsValidTarget(Renderer renderer)
         {
             if (renderer == null) return false;
             if (renderer is not SkinnedMeshRenderer and not MeshRenderer) return false;
@@ -44,7 +44,7 @@ namespace Meshia.MeshSimplification.Ndmf
             return true;
         }
 
-        public bool IsValid() => IsValidForTarget(Renderer);
+        public bool IsValid() => IsValidTarget(Renderer);
         public bool Enabled() => State == OverallMeshiaMeshSimplifierTargetState.Enabled;
     }
 
