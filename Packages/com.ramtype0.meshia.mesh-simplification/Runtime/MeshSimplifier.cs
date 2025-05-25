@@ -50,7 +50,7 @@ namespace Meshia.MeshSimplification
 
         NativeHashSet<int2> SmartLinks;
 
-        NativeList<VertexMerge> VertexMerges;
+        NativeMinPairingHeap<VertexMerge> VertexMerges;
 
         MeshSimplifierOptions Options;
 
@@ -395,8 +395,6 @@ namespace Meshia.MeshSimplification
 
             mergePairs.Dispose(constructVertexMerges);
 
-            var constructVertexMergeOpponentVertices = ScheduleInitializeVertexMergeOpponentVertices(constructVertexMerges);
-
             return stackalloc[]
             {
                 dependency,
@@ -428,7 +426,6 @@ namespace Meshia.MeshSimplification
                 constructTriangleNormalsAndErrorQuadrics,
 
                 constructVertexContainingTrianglesAndTriangleDiscardedBits,
-                constructVertexMergeOpponentVertices,
 
                 constructVertexIsDiscardedBits,
                 constructVertexIsBorderEdgeBits,
@@ -843,11 +840,11 @@ namespace Meshia.MeshSimplification
             JobHandle edgesDependency
             )
         {
-
-            var initializeVertexMergesJob = new InitializeVertexMergesJob
+            NativeList<VertexMerge> unorderedDirtyVertexMerges = new(Allocator);
+            var initializeVertexMergesJob = new InitializeUnorderedDirtyVertexMergesJob
             {
                 Edges = edges.AsDeferredJobArray(),
-                VertexMerges = VertexMerges,
+                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges,
             }.Schedule(edgesDependency);
 
             var computeMergesJob = new ComputeMergesJob
@@ -858,7 +855,7 @@ namespace Meshia.MeshSimplification
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
                 Edges = edges.AsDeferredJobArray(),
-                VertexMerges = VertexMerges.AsDeferredJobArray(),
+                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
                 Options = Options,
             }.Schedule(edges, JobsUtility.CacheLineSize,
             stackalloc[]
@@ -871,25 +868,23 @@ namespace Meshia.MeshSimplification
                 edgesDependency,
                 initializeVertexMergesJob,
             }.CombineDependencies());
-
-            var removeInvalidMergesJob = new RemoveInvalidMergesJob
-            {
-                VertexMerges = VertexMerges,
-            }.Schedule(computeMergesJob);
-
-            return removeInvalidMergesJob;
-        }
-
-        JobHandle ScheduleInitializeVertexMergeOpponentVertices(
-            JobHandle vertexMergesDependency)
-        {
             var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
             {
-                VertexMerges = VertexMerges.AsDeferredJobArray(),
+                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
                 VertexMergeOpponentVertices = VertexMergeOpponentVertices,
-            }.Schedule(vertexMergesDependency);
+            }.Schedule(computeMergesJob);
 
-            return collectVertexMergeOpponentsJob;
+            var collectValidVertexMergesJob = new InitializeVertexMergesJob
+            {
+                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
+                VertexMerges = VertexMerges,
+            }.Schedule(computeMergesJob);
+            var jobHandle = JobHandle.CombineDependencies(collectVertexMergeOpponentsJob, collectValidVertexMergesJob);
+
+
+            unorderedDirtyVertexMerges.Dispose(jobHandle);
+
+            return jobHandle;
         }
         
         

@@ -55,8 +55,7 @@ namespace Meshia.MeshSimplification
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public NativeBitArray VertexIsBorderEdgeBits;
 
-        public unsafe UnsafeMinPriorityQueue<VertexMerge>* VertexMergesPtr;
-        unsafe ref UnsafeMinPriorityQueue<VertexMerge> VertexMerges => ref *VertexMergesPtr;
+        public NativeMinPairingHeap<VertexMerge> VertexMerges;
         public MeshSimplifierOptions Options;
 
         public NativeBitArray DiscardedVertex;
