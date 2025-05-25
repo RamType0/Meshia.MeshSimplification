@@ -20,7 +20,11 @@ namespace Meshia.MeshSimplification
             public static readonly ProfilerMarker ResolveMergedVertexReferences = new(nameof(ResolveMergedVertexReferences));
             public static readonly ProfilerMarker CollectMergedVertexContainingTriangles = new(nameof(CollectMergedVertexContainingTriangles));
             public static readonly ProfilerMarker RecomputeMerges = new(nameof(RecomputeMerges));
+            public static readonly ProfilerMarker ApplyMerge = new(nameof(ApplyMerge));
             public static readonly ProfilerMarker DiscardNonReferencedVertices = new(nameof(DiscardNonReferencedVertices));
+
+
+            public static readonly ProfilerMarker ToMeshData = new(nameof(ToMeshData));
         }
         public NativeArray<float3> VertexPositionBuffer;
         public NativeArray<float4> VertexNormalBuffer;
@@ -287,205 +291,186 @@ namespace Meshia.MeshSimplification
         }
         public void ApplyMerge(VertexMerge merge)
         {
-            var vertexA = merge.VertexAIndex;
-            var vertexB = merge.VertexBIndex;
-            int2 vertexPair = new(math.min(vertexA, vertexB), math.max(vertexA, vertexB));
-
-            if (!VertexIsBorderEdgeBits.IsSet(vertexA) && VertexIsBorderEdgeBits.IsSet(vertexB))
+            using (ProfilerMarkers.ApplyMerge.Auto())
             {
-                (vertexA, vertexB) = (vertexB, vertexA);
-            }
 
-            if (!Options.PreserveBorderEdges || !VertexIsBorderEdgeBits.IsSet(vertexA) || SmartLinks.Contains(vertexPair))
-            {
-                MergeVertexAttributeData(vertexA, vertexB, merge.Position);
-            }
+                var vertexA = merge.VertexAIndex;
+                var vertexB = merge.VertexBIndex;
+                int2 vertexPair = new(math.min(vertexA, vertexB), math.max(vertexA, vertexB));
 
-
-
-
-            VertexErrorQuadrics.ElementAt(vertexA) += VertexErrorQuadrics[vertexB];
-
-            VertexVersions.ElementAt(vertexA)++;
-
-            using var nonReferencedVertices = new UnsafeList<int>(16, Allocator.Temp);
-
-            using var vertexBContainingTriangles = new UnsafeList<int>(16, Allocator.Temp);
-            foreach (var triangleIndex in VertexContainingTriangles.GetValuesForKey(vertexB))
-            {
-                vertexBContainingTriangles.Add(triangleIndex);
-            }
-
-            VertexContainingTriangles.Remove(vertexB);
-            nonReferencedVertices.Add(vertexB);
-
-            // Replace reference to vertexB in triangles to vertexA.
-            using(ProfilerMarkers.ResolveMergedVertexReferences.Auto())
-            {
-                using var discardingTriangles = new UnsafeList<int>(vertexBContainingTriangles.Length, Allocator.Temp);
-                using (ProfilerMarkers.CollectMergedVertexContainingTriangles.Auto())
+                if (!VertexIsBorderEdgeBits.IsSet(vertexA) && VertexIsBorderEdgeBits.IsSet(vertexB))
                 {
-                    foreach (var triangleIndex in vertexBContainingTriangles)
-                    {
-                        ref var triangleVertices = ref GetTriangleVertices(triangleIndex);
-
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                        if (IsDiscardedTriangle(triangleIndex))
-                        {
-                            Debug.LogWarning($"Discarded triangle {triangleIndex} found in the vertex{vertexB} containing triangles.");
-                        }
-                        else if (!math.any(triangleVertices == vertexB))
-                        {
-                            Debug.LogWarning($"Triangle {triangleIndex} found in vertex{vertexB} containing triangles, but it doesn't contain the vertex{vertexB}.");
-                        }
-#endif
-                        // Replace vertexB in triangle to vertexA.
-                        if (math.any(triangleVertices == vertexA))
-                        {
-                            // Triangle vertices (a, b, ?) => (a, a, ?)
-                            // The triangle has only 2 vertices... discarding it
-                            discardingTriangles.Add(triangleIndex);
-                        }
-                        else
-                        {
-                            // Triangle vertices (b, ?, ?) => (a, ?, ?)
-                            triangleVertices = math.select(triangleVertices, vertexA, triangleVertices == vertexB);
-                            VertexContainingTriangles.Add(vertexA, triangleIndex);
-                        }
-                    }
+                    (vertexA, vertexB) = (vertexB, vertexA);
                 }
-                
 
-                foreach (var triangleIndex in discardingTriangles)
+                if (!Options.PreserveBorderEdges || !VertexIsBorderEdgeBits.IsSet(vertexA) || SmartLinks.Contains(vertexPair))
                 {
-                    // Discard vertex which doesn't belong to any triangle.
+                    MergeVertexAttributeData(vertexA, vertexB, merge.Position);
+                }
 
-                    // We need to collect them to discardingTriangles temporary
-                    // because the vertex potentially gets new belonging triangle
-                    // while iterating.
-                    var triangleVertices = GetTriangleVertices(triangleIndex);
-                    for (int i = 0; i < 3; i++)
+
+
+
+                VertexErrorQuadrics.ElementAt(vertexA) += VertexErrorQuadrics[vertexB];
+
+                VertexVersions.ElementAt(vertexA)++;
+
+                using var nonReferencedVertices = new UnsafeList<int>(16, Allocator.Temp);
+
+                using var vertexBContainingTriangles = new UnsafeList<int>(16, Allocator.Temp);
+                foreach (var triangleIndex in VertexContainingTriangles.GetValuesForKey(vertexB))
+                {
+                    vertexBContainingTriangles.Add(triangleIndex);
+                }
+
+                VertexContainingTriangles.Remove(vertexB);
+                nonReferencedVertices.Add(vertexB);
+
+                // Replace reference to vertexB in triangles to vertexA.
+                using (ProfilerMarkers.ResolveMergedVertexReferences.Auto())
+                {
+                    using var discardingTriangles = new UnsafeList<int>(vertexBContainingTriangles.Length, Allocator.Temp);
+                    using (ProfilerMarkers.CollectMergedVertexContainingTriangles.Auto())
                     {
-                        var vertex = triangleVertices[i];
-                        if (vertex == vertexB)
+                        foreach (var triangleIndex in vertexBContainingTriangles)
                         {
-                            continue;
-                        }
-                        VertexContainingTriangles.Remove(vertex, triangleIndex);
-                        if (!VertexContainingTriangles.ContainsKey(vertex))
-                        {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                            if (nonReferencedVertices.Contains(vertex))
+                            ref var triangleVertices = ref GetTriangleVertices(triangleIndex);
+
+
+                            // Replace vertexB in triangle to vertexA.
+                            if (math.any(triangleVertices == vertexA))
                             {
-                                Debug.LogError($"Non referenced vertex{vertex} duplicated.");
+                                // Triangle vertices (a, b, ?) => (a, a, ?)
+                                // The triangle has only 2 vertices... discarding it
+                                discardingTriangles.Add(triangleIndex);
                             }
-#endif
-
-                            nonReferencedVertices.Add(vertex);
-                        }
-                    }
-                    DiscardTriangle(triangleIndex);
-                }
-            }
-
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            if (!nonReferencedVertices.Contains(vertexB))
-            {
-                Debug.LogError($"Non referenced vertices doesn't contain vertexB.");
-            }
-#endif
-
-
-            // Replace all reference to vertexB in merge opponents lookup.
-            // Also, we need to recompute merges.
-
-            if (!nonReferencedVertices.Contains(vertexA))
-            {
-                using (ProfilerMarkers.RecomputeMerges.Auto())
-                {
-                    foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
-                    {
-                        if (MergeFactory.TryComputeMerge(new(vertexA, vertexAOpponentVertex), out var position, out var cost))
-                        {
-                            VertexMerges.Enqueue(new VertexMerge
+                            else
                             {
-                                VertexAIndex = vertexA,
-                                VertexBIndex = vertexAOpponentVertex,
-                                VertexAVersion = VertexVersions[vertexA],
-                                VertexBVersion = VertexVersions[vertexAOpponentVertex],
-                                Position = position,
-                                Cost = cost,
-                            });
+                                // Triangle vertices (b, ?, ?) => (a, ?, ?)
+                                triangleVertices = math.select(triangleVertices, vertexA, triangleVertices == vertexB);
+                                VertexContainingTriangles.Add(vertexA, triangleIndex);
+                            }
                         }
-
                     }
 
-                    // Recompute merge with vertexB since it was merged into vertexA
+
+                    foreach (var triangleIndex in discardingTriangles)
                     {
-                        using var vertexBOpponentVertices = new UnsafeList<int>(16, Allocator.Temp);
-                        foreach (var vertexBOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexB))
+                        // Discard vertex which doesn't belong to any triangle.
+
+                        // We need to collect them to discardingTriangles temporary
+                        // because the vertex potentially gets new belonging triangle
+                        // while iterating.
+                        var triangleVertices = GetTriangleVertices(triangleIndex);
+                        for (int i = 0; i < 3; i++)
                         {
-                            vertexBOpponentVertices.Add(vertexBOpponentVertex);
-                        }
-                        foreach (var vertexBOpponentVertex in vertexBOpponentVertices)
-                        {
-                            if (vertexBOpponentVertex == vertexA)
+                            var vertex = triangleVertices[i];
+                            if (vertex == vertexB)
                             {
                                 continue;
                             }
-
-                            foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
+                            VertexContainingTriangles.Remove(vertex, triangleIndex);
+                            if (!VertexContainingTriangles.ContainsKey(vertex))
                             {
-                                if (vertexBOpponentVertex == vertexAOpponentVertex)
-                                {
-                                    goto NextVertexBOpponent;
-                                }
-                            }
 
-                            if (MergeFactory.TryComputeMerge(new(vertexA, vertexBOpponentVertex), out var position, out var cost))
+                                nonReferencedVertices.Add(vertex);
+                            }
+                        }
+                        DiscardTriangle(triangleIndex);
+                    }
+                }
+
+
+                // Replace all reference to vertexB in merge opponents lookup.
+                // Also, we need to recompute merges.
+
+                if (!nonReferencedVertices.Contains(vertexA))
+                {
+                    using (ProfilerMarkers.RecomputeMerges.Auto())
+                    {
+                        foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
+                        {
+                            if (MergeFactory.TryComputeMerge(new(vertexA, vertexAOpponentVertex), out var position, out var cost))
                             {
                                 VertexMerges.Enqueue(new VertexMerge
                                 {
                                     VertexAIndex = vertexA,
-                                    VertexBIndex = vertexBOpponentVertex,
+                                    VertexBIndex = vertexAOpponentVertex,
                                     VertexAVersion = VertexVersions[vertexA],
-                                    VertexBVersion = VertexVersions[vertexBOpponentVertex],
+                                    VertexBVersion = VertexVersions[vertexAOpponentVertex],
                                     Position = position,
                                     Cost = cost,
                                 });
-                                VertexMergeOpponentVertices.Add(vertexA, vertexBOpponentVertex);
-                                VertexMergeOpponentVertices.Add(vertexBOpponentVertex, vertexA);
                             }
-                        NextVertexBOpponent:;
+
+                        }
+
+                        // Recompute merge with vertexB since it was merged into vertexA
+                        {
+                            using var vertexBOpponentVertices = new UnsafeList<int>(16, Allocator.Temp);
+                            foreach (var vertexBOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexB))
+                            {
+                                vertexBOpponentVertices.Add(vertexBOpponentVertex);
+                            }
+                            foreach (var vertexBOpponentVertex in vertexBOpponentVertices)
+                            {
+                                if (vertexBOpponentVertex == vertexA)
+                                {
+                                    continue;
+                                }
+
+                                foreach (var vertexAOpponentVertex in VertexMergeOpponentVertices.GetValuesForKey(vertexA))
+                                {
+                                    if (vertexBOpponentVertex == vertexAOpponentVertex)
+                                    {
+                                        goto NextVertexBOpponent;
+                                    }
+                                }
+
+                                if (MergeFactory.TryComputeMerge(new(vertexA, vertexBOpponentVertex), out var position, out var cost))
+                                {
+                                    VertexMerges.Enqueue(new VertexMerge
+                                    {
+                                        VertexAIndex = vertexA,
+                                        VertexBIndex = vertexBOpponentVertex,
+                                        VertexAVersion = VertexVersions[vertexA],
+                                        VertexBVersion = VertexVersions[vertexBOpponentVertex],
+                                        Position = position,
+                                        Cost = cost,
+                                    });
+                                    VertexMergeOpponentVertices.Add(vertexA, vertexBOpponentVertex);
+                                    VertexMergeOpponentVertices.Add(vertexBOpponentVertex, vertexA);
+                                }
+                            NextVertexBOpponent:;
+                            }
                         }
                     }
-                }
-                
-            }
-            using(ProfilerMarkers.DiscardNonReferencedVertices.Auto())
-            {
 
-                foreach (var nonReferencedVertex in nonReferencedVertices)
+                }
+                using (ProfilerMarkers.DiscardNonReferencedVertices.Auto())
                 {
-                    if (IsDiscardedVertex(nonReferencedVertex))
-                    {
-                        continue;
-                    }
-                    using var opponentVertices = new UnsafeList<int>(16, Allocator.Temp);
-                    foreach (var opponentVertex in VertexMergeOpponentVertices.GetValuesForKey(nonReferencedVertex))
-                    {
-                        opponentVertices.Add(opponentVertex);
-                    }
-                    VertexMergeOpponentVertices.Remove(nonReferencedVertex);
-                    foreach (var opponentVertex in opponentVertices)
-                    {
 
-                        VertexMergeOpponentVertices.Remove(opponentVertex, nonReferencedVertex);
+                    foreach (var nonReferencedVertex in nonReferencedVertices)
+                    {
+                        if (IsDiscardedVertex(nonReferencedVertex))
+                        {
+                            continue;
+                        }
+                        using var opponentVertices = new UnsafeList<int>(16, Allocator.Temp);
+                        foreach (var opponentVertex in VertexMergeOpponentVertices.GetValuesForKey(nonReferencedVertex))
+                        {
+                            opponentVertices.Add(opponentVertex);
+                        }
+                        VertexMergeOpponentVertices.Remove(nonReferencedVertex);
+                        foreach (var opponentVertex in opponentVertices)
+                        {
+
+                            VertexMergeOpponentVertices.Remove(opponentVertex, nonReferencedVertex);
+                        }
+                        DiscardVertex(nonReferencedVertex);
                     }
-                    DiscardVertex(nonReferencedVertex);
                 }
             }
-
         }
         readonly ref int3 GetTriangleVertices(int triangleIndex)
         {
@@ -763,387 +748,389 @@ namespace Meshia.MeshSimplification
         }
         public void ToMeshData(Mesh.MeshData sourceMesh, Mesh.MeshData destinationMesh, NativeList<BlendShapeData> destinationBlendShapes, AllocatorManager.AllocatorHandle blendShapeDataAllocator)
         {
-
-            var sourceVertexCount = sourceMesh.vertexCount;
-            var destinationVertexCount = VertexCount;
-            int destinationTriangleIndexCount = 0;
-
-            for (int subMeshIndex = 0, triangleIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+            using (ProfilerMarkers.ToMeshData.Auto())
             {
-                var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
-                if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
-                {
-                    int triangleCount = sourceSubMeshDescriptor.indexCount / 3;
-                    destinationTriangleIndexCount += triangleCount - DiscardedTriangle.CountBits(triangleIndex, triangleCount);
-                    triangleIndex += triangleCount;
-                }
-            }
+                var sourceVertexCount = sourceMesh.vertexCount;
+                var destinationVertexCount = VertexCount;
+                int destinationTriangleIndexCount = 0;
 
-            var destinationToSourceVertexIndex = new NativeArray<int>(destinationVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-            var sourceToDestinationVertexIndex = new NativeArray<int>(sourceVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-            var destinationToSourceTriangleIndex = new NativeArray<int>(destinationTriangleIndexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-            var destinationIndexFormat = IndexFormat.UInt16;
-
-            var destinationSubMeshes = new NativeArray<SubMeshDescriptor>(sourceMesh.subMeshCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-
-            {
-                var destinationIndexBufferIndex = 0;
-                var destinationTriangleIndex = 0;
-                var sourceTriangleIndex = 0;
-                for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                for (int subMeshIndex = 0, triangleIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
                 {
                     var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
-                    var destinationSubMesh = new SubMeshDescriptor
-                    {
-                        bounds = sourceSubMeshDescriptor.bounds,
-                        topology = sourceSubMeshDescriptor.topology,
-                        indexStart = destinationIndexBufferIndex,
-                        firstVertex = int.MaxValue,
-                        vertexCount = 0,
-                    };
-
                     if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
                     {
-                        var sourceSubMeshTriangleCount = sourceSubMeshDescriptor.indexCount / 3;
+                        int triangleCount = sourceSubMeshDescriptor.indexCount / 3;
+                        destinationTriangleIndexCount += triangleCount - DiscardedTriangle.CountBits(triangleIndex, triangleCount);
+                        triangleIndex += triangleCount;
+                    }
+                }
 
-                        var sourceSubMeshTriangleEnd = sourceTriangleIndex + sourceSubMeshTriangleCount;
-                        for (; sourceTriangleIndex < sourceSubMeshTriangleEnd; sourceTriangleIndex++)
+                var destinationToSourceVertexIndex = new NativeArray<int>(destinationVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+                var sourceToDestinationVertexIndex = new NativeArray<int>(sourceVertexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+                var destinationToSourceTriangleIndex = new NativeArray<int>(destinationTriangleIndexCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+                var destinationIndexFormat = IndexFormat.UInt16;
+
+                var destinationSubMeshes = new NativeArray<SubMeshDescriptor>(sourceMesh.subMeshCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+                {
+                    var destinationIndexBufferIndex = 0;
+                    var destinationTriangleIndex = 0;
+                    var sourceTriangleIndex = 0;
+                    for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                    {
+                        var sourceSubMeshDescriptor = sourceMesh.GetSubMesh(subMeshIndex);
+                        var destinationSubMesh = new SubMeshDescriptor
                         {
-                            if (!DiscardedTriangle.IsSet(sourceTriangleIndex))
-                            {
-                                destinationToSourceTriangleIndex[destinationTriangleIndex++] = sourceTriangleIndex;
+                            bounds = sourceSubMeshDescriptor.bounds,
+                            topology = sourceSubMeshDescriptor.topology,
+                            indexStart = destinationIndexBufferIndex,
+                            firstVertex = int.MaxValue,
+                            vertexCount = 0,
+                        };
 
-                                destinationIndexBufferIndex += 3;
+                        if (sourceSubMeshDescriptor.topology is MeshTopology.Triangles)
+                        {
+                            var sourceSubMeshTriangleCount = sourceSubMeshDescriptor.indexCount / 3;
+
+                            var sourceSubMeshTriangleEnd = sourceTriangleIndex + sourceSubMeshTriangleCount;
+                            for (; sourceTriangleIndex < sourceSubMeshTriangleEnd; sourceTriangleIndex++)
+                            {
+                                if (!DiscardedTriangle.IsSet(sourceTriangleIndex))
+                                {
+                                    destinationToSourceTriangleIndex[destinationTriangleIndex++] = sourceTriangleIndex;
+
+                                    destinationIndexBufferIndex += 3;
+                                }
                             }
                         }
+                        else
+                        {
+                            destinationIndexBufferIndex += sourceSubMeshDescriptor.indexCount;
+                        }
+
+                        destinationSubMesh.indexCount = destinationIndexBufferIndex - destinationSubMesh.indexStart;
+
+                        // baseVertex is not set yet
+                        destinationSubMeshes[subMeshIndex] = destinationSubMesh;
                     }
-                    else
+                }
+
+                for (int sourceVertexIndex = 0, destinationVertexIndex = 0; sourceVertexIndex < sourceVertexCount; sourceVertexIndex++)
+                {
+                    if (DiscardedVertex.IsSet(sourceVertexIndex))
                     {
-                        destinationIndexBufferIndex += sourceSubMeshDescriptor.indexCount;
+                        continue;
                     }
+                    destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
+                    sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
 
-                    destinationSubMesh.indexCount = destinationIndexBufferIndex - destinationSubMesh.indexStart;
-
-                    // baseVertex is not set yet
-                    destinationSubMeshes[subMeshIndex] = destinationSubMesh;
+                    for (uint indexMask = VertexContainingSubMeshIndices[sourceVertexIndex]; indexMask != 0u; indexMask &= indexMask - 1)
+                    {
+                        var subMeshIndex = math.tzcnt(indexMask);
+                        ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
+                        destinationSubMesh.firstVertex = math.min(
+                            destinationSubMesh.firstVertex,
+                            destinationVertexIndex
+                        );
+                        destinationSubMesh.vertexCount = math.max(
+                            destinationSubMesh.vertexCount,
+                            destinationVertexIndex - destinationSubMesh.firstVertex + 1
+                        );
+                    }
+                    destinationVertexIndex++;
                 }
-            }
 
-            for (int sourceVertexIndex = 0, destinationVertexIndex = 0; sourceVertexIndex < sourceVertexCount; sourceVertexIndex++)
-            {
-                if (DiscardedVertex.IsSet(sourceVertexIndex))
+                for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
                 {
-                    continue;
-                }
-                destinationToSourceVertexIndex[destinationVertexIndex] = sourceVertexIndex;
-                sourceToDestinationVertexIndex[sourceVertexIndex] = destinationVertexIndex;
-
-                for (uint indexMask = VertexContainingSubMeshIndices[sourceVertexIndex]; indexMask != 0u; indexMask &= indexMask - 1)
-                {
-                    var subMeshIndex = math.tzcnt(indexMask);
                     ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
-                    destinationSubMesh.firstVertex = math.min(
-                        destinationSubMesh.firstVertex,
-                        destinationVertexIndex
-                    );
-                    destinationSubMesh.vertexCount = math.max(
-                        destinationSubMesh.vertexCount,
-                        destinationVertexIndex - destinationSubMesh.firstVertex + 1
-                    );
-                }
-                destinationVertexIndex++;
-            }
-
-            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
-            {
-                ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
-                if(destinationSubMesh.vertexCount == 0)
-                {
-                    destinationSubMesh.firstVertex = 0;
-                }
-                else if (destinationSubMesh.vertexCount >= ushort.MaxValue)
-                {
-                    destinationIndexFormat = IndexFormat.UInt32;
-                }
-            }
-
-            var maxIndexBufferValue = destinationIndexFormat switch
-            {
-                IndexFormat.UInt16 => ushort.MaxValue,
-                IndexFormat.UInt32 => uint.MaxValue,
-                _ => throw new Exception($"Unexpected index format:{destinationIndexFormat}"),
-            };
-            var currentDestinationBaseVertex = 0;
-            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
-            {
-                ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
-
-                if (destinationSubMesh.firstVertex + destinationSubMesh.vertexCount - currentDestinationBaseVertex >= maxIndexBufferValue)
-                {
-                    currentDestinationBaseVertex = destinationSubMesh.firstVertex;
-                }
-                destinationSubMesh.baseVertex = currentDestinationBaseVertex;
-            }
-
-            using var vertexAttributeDescriptors = sourceMesh.GetVertexAttributeDescriptors(Allocator.Temp);
-
-            destinationMesh.SetVertexBufferParams(VertexCount, vertexAttributeDescriptors.AsArray());
-
-            var destinationVertexPositions = destinationMesh.GetVertexPositions();
-
-            for (int i = 0; i < destinationVertexPositions.Length; i++)
-            {
-                destinationVertexPositions[i] = VertexPositionBuffer[destinationToSourceVertexIndex[i]];
-            }
-
-            SetVertexAttributeData(destinationMesh, VertexAttribute.Normal, VertexNormalBuffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.Tangent, VertexTangentBuffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.Color, VertexColorBuffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord0, VertexTexCoord0Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord1, VertexTexCoord1Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord2, VertexTexCoord2Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord3, VertexTexCoord3Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord4, VertexTexCoord4Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord5, VertexTexCoord5Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord6, VertexTexCoord6Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord7, VertexTexCoord7Buffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.BlendWeight, VertexBlendWeightBuffer, destinationToSourceVertexIndex);
-            SetVertexAttributeData(destinationMesh, VertexAttribute.BlendIndices, VertexBlendIndicesBuffer.Reinterpret<int>(), destinationToSourceVertexIndex);
-
-            if(destinationBlendShapes.Capacity < BlendShapes.Length)
-            {
-                destinationBlendShapes.Capacity = BlendShapes.Length;
-            }
-
-            for (int shapeIndex = 0; shapeIndex < BlendShapes.Length; shapeIndex++)
-            {
-                var sourceBlendShape = BlendShapes[shapeIndex];
-                var sourceFrames = sourceBlendShape.Frames;
-
-                UnsafeText destinationBlendShapeName = new(sourceBlendShape.Name.Length, blendShapeDataAllocator);
-                destinationBlendShapeName.CopyFrom(sourceBlendShape.Name);
-                UnsafeList<BlendShapeFrameData> destinationFrames = new(sourceFrames.Length, blendShapeDataAllocator);
-
-                for (int frameIndex = 0; frameIndex < sourceFrames.Length; frameIndex++)
-                {
-                    var sourceFrame = sourceFrames[frameIndex];
-                    var weight = sourceFrame.Weight;
-                    var sourceDeltaVertices = sourceFrame.DeltaVertices;
-                    var sourceDeltaNormals = sourceFrame.DeltaNormals;
-                    var sourceDeltaTangents = sourceFrame.DeltaTangents;
-
-                    UnsafeList<float3> destinationDeltaVertices = new(destinationVertexCount, blendShapeDataAllocator);
-                    
-                    for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                    if (destinationSubMesh.vertexCount == 0)
                     {
-                        var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
-                        var deltaVertex = sourceDeltaVertices[sourceVertexIndex];
-                        destinationDeltaVertices.Add(deltaVertex);
+                        destinationSubMesh.firstVertex = 0;
                     }
-                    UnsafeList<float3> destinationDeltaNormals = new(destinationVertexCount, blendShapeDataAllocator);
-                    for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                    else if (destinationSubMesh.vertexCount >= ushort.MaxValue)
                     {
-                        var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
-                        var deltaNormal = sourceDeltaNormals[sourceVertexIndex];
-                        destinationDeltaNormals.Add(deltaNormal);
+                        destinationIndexFormat = IndexFormat.UInt32;
                     }
-                    UnsafeList<float3> destinationDeltaTangents = new(destinationVertexCount, blendShapeDataAllocator);
-                    for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                }
+
+                var maxIndexBufferValue = destinationIndexFormat switch
+                {
+                    IndexFormat.UInt16 => ushort.MaxValue,
+                    IndexFormat.UInt32 => uint.MaxValue,
+                    _ => throw new Exception($"Unexpected index format:{destinationIndexFormat}"),
+                };
+                var currentDestinationBaseVertex = 0;
+                for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                {
+                    ref var destinationSubMesh = ref destinationSubMeshes.ElementAt(subMeshIndex);
+
+                    if (destinationSubMesh.firstVertex + destinationSubMesh.vertexCount - currentDestinationBaseVertex >= maxIndexBufferValue)
                     {
-                        var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
-                        var deltaTangent = sourceDeltaTangents[sourceVertexIndex];
-                        destinationDeltaTangents.Add(deltaTangent);
+                        currentDestinationBaseVertex = destinationSubMesh.firstVertex;
                     }
-                    destinationFrames.Add(new()
+                    destinationSubMesh.baseVertex = currentDestinationBaseVertex;
+                }
+
+                using var vertexAttributeDescriptors = sourceMesh.GetVertexAttributeDescriptors(Allocator.Temp);
+
+                destinationMesh.SetVertexBufferParams(VertexCount, vertexAttributeDescriptors.AsArray());
+
+                var destinationVertexPositions = destinationMesh.GetVertexPositions();
+
+                for (int i = 0; i < destinationVertexPositions.Length; i++)
+                {
+                    destinationVertexPositions[i] = VertexPositionBuffer[destinationToSourceVertexIndex[i]];
+                }
+
+                SetVertexAttributeData(destinationMesh, VertexAttribute.Normal, VertexNormalBuffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.Tangent, VertexTangentBuffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.Color, VertexColorBuffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord0, VertexTexCoord0Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord1, VertexTexCoord1Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord2, VertexTexCoord2Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord3, VertexTexCoord3Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord4, VertexTexCoord4Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord5, VertexTexCoord5Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord6, VertexTexCoord6Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.TexCoord7, VertexTexCoord7Buffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.BlendWeight, VertexBlendWeightBuffer, destinationToSourceVertexIndex);
+                SetVertexAttributeData(destinationMesh, VertexAttribute.BlendIndices, VertexBlendIndicesBuffer.Reinterpret<int>(), destinationToSourceVertexIndex);
+
+                if (destinationBlendShapes.Capacity < BlendShapes.Length)
+                {
+                    destinationBlendShapes.Capacity = BlendShapes.Length;
+                }
+
+                for (int shapeIndex = 0; shapeIndex < BlendShapes.Length; shapeIndex++)
+                {
+                    var sourceBlendShape = BlendShapes[shapeIndex];
+                    var sourceFrames = sourceBlendShape.Frames;
+
+                    UnsafeText destinationBlendShapeName = new(sourceBlendShape.Name.Length, blendShapeDataAllocator);
+                    destinationBlendShapeName.CopyFrom(sourceBlendShape.Name);
+                    UnsafeList<BlendShapeFrameData> destinationFrames = new(sourceFrames.Length, blendShapeDataAllocator);
+
+                    for (int frameIndex = 0; frameIndex < sourceFrames.Length; frameIndex++)
                     {
-                        Weight = weight,
-                        DeltaVertices = destinationDeltaVertices,
-                        DeltaNormals = destinationDeltaNormals,
-                        DeltaTangents = destinationDeltaTangents,
+                        var sourceFrame = sourceFrames[frameIndex];
+                        var weight = sourceFrame.Weight;
+                        var sourceDeltaVertices = sourceFrame.DeltaVertices;
+                        var sourceDeltaNormals = sourceFrame.DeltaNormals;
+                        var sourceDeltaTangents = sourceFrame.DeltaTangents;
+
+                        UnsafeList<float3> destinationDeltaVertices = new(destinationVertexCount, blendShapeDataAllocator);
+
+                        for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                        {
+                            var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
+                            var deltaVertex = sourceDeltaVertices[sourceVertexIndex];
+                            destinationDeltaVertices.Add(deltaVertex);
+                        }
+                        UnsafeList<float3> destinationDeltaNormals = new(destinationVertexCount, blendShapeDataAllocator);
+                        for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                        {
+                            var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
+                            var deltaNormal = sourceDeltaNormals[sourceVertexIndex];
+                            destinationDeltaNormals.Add(deltaNormal);
+                        }
+                        UnsafeList<float3> destinationDeltaTangents = new(destinationVertexCount, blendShapeDataAllocator);
+                        for (int destinationVertexIndex = 0; destinationVertexIndex < destinationVertexCount; destinationVertexIndex++)
+                        {
+                            var sourceVertexIndex = destinationToSourceVertexIndex[destinationVertexIndex];
+                            var deltaTangent = sourceDeltaTangents[sourceVertexIndex];
+                            destinationDeltaTangents.Add(deltaTangent);
+                        }
+                        destinationFrames.Add(new()
+                        {
+                            Weight = weight,
+                            DeltaVertices = destinationDeltaVertices,
+                            DeltaNormals = destinationDeltaNormals,
+                            DeltaTangents = destinationDeltaTangents,
+                        });
+                    }
+                    destinationBlendShapes.Add(new()
+                    {
+                        Name = destinationBlendShapeName,
+                        Frames = destinationFrames,
                     });
                 }
-                destinationBlendShapes.Add(new()
+
+                destinationMesh.SetIndexBufferParams(sourceMesh.GetIndexCount() - DiscardedTriangle.CountBits(0, DiscardedTriangle.Length) * 3, destinationIndexFormat);
+
+                switch (destinationIndexFormat)
                 {
-                    Name = destinationBlendShapeName,
-                    Frames = destinationFrames,
-                });
-            }
-
-            destinationMesh.SetIndexBufferParams(sourceMesh.GetIndexCount() - DiscardedTriangle.CountBits(0, DiscardedTriangle.Length) * 3, destinationIndexFormat);
-
-            switch (destinationIndexFormat)
-            {
-                case IndexFormat.UInt16:
-                    {
-                        var destinationSubMeshTriangleStart = 0;
-                        var destinationIndices = destinationMesh.GetIndexData<ushort>();
-                        for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                    case IndexFormat.UInt16:
                         {
-                            var destinationSubMesh = destinationSubMeshes[subMeshIndex];
-                            var destinationSubMeshIndexEnd = destinationSubMesh.indexStart + destinationSubMesh.indexCount;
-
-                            if (destinationSubMesh.topology is MeshTopology.Triangles)
+                            var destinationSubMeshTriangleStart = 0;
+                            var destinationIndices = destinationMesh.GetIndexData<ushort>();
+                            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
                             {
-                                var destinationSubMeshTriangleCount = destinationSubMesh.indexCount / 3;
+                                var destinationSubMesh = destinationSubMeshes[subMeshIndex];
+                                var destinationSubMeshIndexEnd = destinationSubMesh.indexStart + destinationSubMesh.indexCount;
 
-                                var destinationSubMeshTriangleEnd = destinationSubMeshTriangleStart + destinationSubMeshTriangleCount;
-
-                                for (int destinationSubMeshTriangleIndex = 0; destinationSubMeshTriangleIndex < destinationSubMeshTriangleCount; destinationSubMeshTriangleIndex++)
+                                if (destinationSubMesh.topology is MeshTopology.Triangles)
                                 {
-                                    var destinationTriangleIndex = destinationSubMeshTriangleStart + destinationSubMeshTriangleIndex;
+                                    var destinationSubMeshTriangleCount = destinationSubMesh.indexCount / 3;
 
+                                    var destinationSubMeshTriangleEnd = destinationSubMeshTriangleStart + destinationSubMeshTriangleCount;
 
-                                    var sourceTriangleIndex = destinationToSourceTriangleIndex[destinationTriangleIndex];
-
-                                    var sourceTriangle = Triangles[sourceTriangleIndex];
-                                    int3 destinationTriangle = new()
+                                    for (int destinationSubMeshTriangleIndex = 0; destinationSubMeshTriangleIndex < destinationSubMeshTriangleCount; destinationSubMeshTriangleIndex++)
                                     {
-                                        x = sourceToDestinationVertexIndex[sourceTriangle.x],
-                                        y = sourceToDestinationVertexIndex[sourceTriangle.y],
-                                        z = sourceToDestinationVertexIndex[sourceTriangle.z],
-                                    };
+                                        var destinationTriangleIndex = destinationSubMeshTriangleStart + destinationSubMeshTriangleIndex;
 
-                                    destinationTriangle -= destinationSubMesh.baseVertex;
 
-                                    var destinationTriangleStart = destinationSubMeshTriangleIndex * 3 + destinationSubMesh.indexStart;
+                                        var sourceTriangleIndex = destinationToSourceTriangleIndex[destinationTriangleIndex];
 
-                                    destinationIndices[destinationTriangleStart + 0] = (ushort)destinationTriangle.x;
-                                    destinationIndices[destinationTriangleStart + 1] = (ushort)destinationTriangle.y;
-                                    destinationIndices[destinationTriangleStart + 2] = (ushort)destinationTriangle.z;
+                                        var sourceTriangle = Triangles[sourceTriangleIndex];
+                                        int3 destinationTriangle = new()
+                                        {
+                                            x = sourceToDestinationVertexIndex[sourceTriangle.x],
+                                            y = sourceToDestinationVertexIndex[sourceTriangle.y],
+                                            z = sourceToDestinationVertexIndex[sourceTriangle.z],
+                                        };
+
+                                        destinationTriangle -= destinationSubMesh.baseVertex;
+
+                                        var destinationTriangleStart = destinationSubMeshTriangleIndex * 3 + destinationSubMesh.indexStart;
+
+                                        destinationIndices[destinationTriangleStart + 0] = (ushort)destinationTriangle.x;
+                                        destinationIndices[destinationTriangleStart + 1] = (ushort)destinationTriangle.y;
+                                        destinationIndices[destinationTriangleStart + 2] = (ushort)destinationTriangle.z;
+                                    }
+                                    destinationSubMeshTriangleStart += destinationSubMeshTriangleCount;
                                 }
-                                destinationSubMeshTriangleStart += destinationSubMeshTriangleCount;
-                            }
-                            else
-                            {
-                                var sourceSubMesh = sourceMesh.GetSubMesh(subMeshIndex);
-
-                                var subMeshVertexIndexOffset = destinationSubMesh.firstVertex - sourceSubMesh.firstVertex;
-
-                                var destinationSubMeshIndexBuffer = destinationIndices.GetSubArray(destinationSubMesh.indexStart, destinationSubMesh.indexCount);
-                                switch (sourceMesh.indexFormat)
+                                else
                                 {
-                                    case IndexFormat.UInt16:
-                                        {
-                                            var sourceIndexBuffer = sourceMesh.GetIndexData<ushort>();
+                                    var sourceSubMesh = sourceMesh.GetSubMesh(subMeshIndex);
 
-                                            var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
-                                            for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
-                                            {
-                                                var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
-                                                var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
-                                                var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
-                                                destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = (ushort)destinationIndexBufferValue;
-                                            }
-                                        }
-                                        break;
-                                    case IndexFormat.UInt32:
-                                        {
-                                            var sourceIndexBuffer = sourceMesh.GetIndexData<uint>();
+                                    var subMeshVertexIndexOffset = destinationSubMesh.firstVertex - sourceSubMesh.firstVertex;
 
-                                            var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
-                                            for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                    var destinationSubMeshIndexBuffer = destinationIndices.GetSubArray(destinationSubMesh.indexStart, destinationSubMesh.indexCount);
+                                    switch (sourceMesh.indexFormat)
+                                    {
+                                        case IndexFormat.UInt16:
                                             {
-                                                var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
-                                                var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
-                                                var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
-                                                destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = (ushort)destinationIndexBufferValue;
+                                                var sourceIndexBuffer = sourceMesh.GetIndexData<ushort>();
+
+                                                var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
+                                                for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                                {
+                                                    var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
+                                                    var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
+                                                    var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
+                                                    destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = (ushort)destinationIndexBufferValue;
+                                                }
                                             }
-                                        }
-                                        break;
+                                            break;
+                                        case IndexFormat.UInt32:
+                                            {
+                                                var sourceIndexBuffer = sourceMesh.GetIndexData<uint>();
+
+                                                var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
+                                                for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                                {
+                                                    var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
+                                                    var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
+                                                    var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
+                                                    destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = (ushort)destinationIndexBufferValue;
+                                                }
+                                            }
+                                            break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    break;
-                case IndexFormat.UInt32:
-                    {
-                        var destinationSubMeshTriangleStart = 0;
-                        var destinationIndices = destinationMesh.GetIndexData<int>();
-                        for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
+                        break;
+                    case IndexFormat.UInt32:
                         {
-                            var destinationSubMesh = destinationSubMeshes[subMeshIndex];
-                            var destinationSubMeshIndexEnd = destinationSubMesh.indexStart + destinationSubMesh.indexCount;
-
-                            if (destinationSubMesh.topology is MeshTopology.Triangles)
+                            var destinationSubMeshTriangleStart = 0;
+                            var destinationIndices = destinationMesh.GetIndexData<int>();
+                            for (int subMeshIndex = 0; subMeshIndex < sourceMesh.subMeshCount; subMeshIndex++)
                             {
-                                var destinationSubMeshTriangleCount = destinationSubMesh.indexCount / 3;
+                                var destinationSubMesh = destinationSubMeshes[subMeshIndex];
+                                var destinationSubMeshIndexEnd = destinationSubMesh.indexStart + destinationSubMesh.indexCount;
 
-                                var destinationSubMeshTriangleEnd = destinationSubMeshTriangleStart + destinationSubMeshTriangleCount;
-
-                                for (int destinationSubMeshTriangleIndex = 0; destinationSubMeshTriangleIndex < destinationSubMeshTriangleCount; destinationSubMeshTriangleIndex++)
+                                if (destinationSubMesh.topology is MeshTopology.Triangles)
                                 {
-                                    var destinationTriangleIndex = destinationSubMeshTriangleStart + destinationSubMeshTriangleIndex;
+                                    var destinationSubMeshTriangleCount = destinationSubMesh.indexCount / 3;
 
+                                    var destinationSubMeshTriangleEnd = destinationSubMeshTriangleStart + destinationSubMeshTriangleCount;
 
-                                    var sourceTriangleIndex = destinationToSourceTriangleIndex[destinationTriangleIndex];
-
-                                    var sourceTriangle = Triangles[sourceTriangleIndex];
-                                    int3 destinationTriangle = new()
+                                    for (int destinationSubMeshTriangleIndex = 0; destinationSubMeshTriangleIndex < destinationSubMeshTriangleCount; destinationSubMeshTriangleIndex++)
                                     {
-                                        x = sourceToDestinationVertexIndex[sourceTriangle.x],
-                                        y = sourceToDestinationVertexIndex[sourceTriangle.y],
-                                        z = sourceToDestinationVertexIndex[sourceTriangle.z],
-                                    };
+                                        var destinationTriangleIndex = destinationSubMeshTriangleStart + destinationSubMeshTriangleIndex;
 
-                                    destinationTriangle -= destinationSubMesh.baseVertex;
 
-                                    var destinationTriangleStart = destinationSubMeshTriangleIndex * 3 + destinationSubMesh.indexStart;
-                                    destinationIndices[destinationTriangleStart + 0] = destinationTriangle.x;
-                                    destinationIndices[destinationTriangleStart + 1] = destinationTriangle.y;
-                                    destinationIndices[destinationTriangleStart + 2] = destinationTriangle.z;
+                                        var sourceTriangleIndex = destinationToSourceTriangleIndex[destinationTriangleIndex];
+
+                                        var sourceTriangle = Triangles[sourceTriangleIndex];
+                                        int3 destinationTriangle = new()
+                                        {
+                                            x = sourceToDestinationVertexIndex[sourceTriangle.x],
+                                            y = sourceToDestinationVertexIndex[sourceTriangle.y],
+                                            z = sourceToDestinationVertexIndex[sourceTriangle.z],
+                                        };
+
+                                        destinationTriangle -= destinationSubMesh.baseVertex;
+
+                                        var destinationTriangleStart = destinationSubMeshTriangleIndex * 3 + destinationSubMesh.indexStart;
+                                        destinationIndices[destinationTriangleStart + 0] = destinationTriangle.x;
+                                        destinationIndices[destinationTriangleStart + 1] = destinationTriangle.y;
+                                        destinationIndices[destinationTriangleStart + 2] = destinationTriangle.z;
+                                    }
+                                    destinationSubMeshTriangleStart += destinationSubMeshTriangleCount;
                                 }
-                                destinationSubMeshTriangleStart += destinationSubMeshTriangleCount;
-                            }
-                            else
-                            {
-                                var sourceSubMesh = sourceMesh.GetSubMesh(subMeshIndex);
-
-                                var subMeshVertexIndexOffset = destinationSubMesh.firstVertex - sourceSubMesh.firstVertex;
-
-
-                                var destinationSubMeshIndexBuffer = destinationIndices.GetSubArray(destinationSubMesh.indexStart, destinationSubMesh.indexCount);
-                                switch (sourceMesh.indexFormat)
+                                else
                                 {
-                                    case IndexFormat.UInt16:
-                                        {
-                                            var sourceIndexBuffer = sourceMesh.GetIndexData<ushort>();
-                                            var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
-                                            for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                    var sourceSubMesh = sourceMesh.GetSubMesh(subMeshIndex);
+
+                                    var subMeshVertexIndexOffset = destinationSubMesh.firstVertex - sourceSubMesh.firstVertex;
+
+
+                                    var destinationSubMeshIndexBuffer = destinationIndices.GetSubArray(destinationSubMesh.indexStart, destinationSubMesh.indexCount);
+                                    switch (sourceMesh.indexFormat)
+                                    {
+                                        case IndexFormat.UInt16:
                                             {
-                                                var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
-                                                var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
-                                                var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
-                                                destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = destinationIndexBufferValue;
+                                                var sourceIndexBuffer = sourceMesh.GetIndexData<ushort>();
+                                                var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
+                                                for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                                {
+                                                    var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
+                                                    var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
+                                                    var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
+                                                    destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = destinationIndexBufferValue;
+                                                }
                                             }
-                                        }
-                                        break;
-                                    case IndexFormat.UInt32:
-                                        {
-                                            var sourceIndexBuffer = sourceMesh.GetIndexData<int>();
-                                            var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
-                                            for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                            break;
+                                        case IndexFormat.UInt32:
                                             {
-                                                var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
-                                                var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
-                                                var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
-                                                destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = destinationIndexBufferValue;
+                                                var sourceIndexBuffer = sourceMesh.GetIndexData<int>();
+                                                var sourceSubMeshIndexBuffer = sourceIndexBuffer.GetSubArray(sourceSubMesh.indexStart, sourceSubMesh.indexCount);
+                                                for (int subMeshIndexBufferIndex = 0; subMeshIndexBufferIndex < destinationSubMesh.indexCount; subMeshIndexBufferIndex++)
+                                                {
+                                                    var sourceVertexIndex = sourceSubMeshIndexBuffer[subMeshIndexBufferIndex] + sourceSubMesh.baseVertex;
+                                                    var destinationVertexIndex = sourceVertexIndex + subMeshVertexIndexOffset;
+                                                    var destinationIndexBufferValue = destinationVertexIndex - destinationSubMesh.baseVertex;
+                                                    destinationSubMeshIndexBuffer[subMeshIndexBufferIndex] = destinationIndexBufferValue;
+                                                }
                                             }
-                                        }
-                                        break;
+                                            break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    break;
-            }
+                        break;
+                }
 
-            destinationMesh.subMeshCount = destinationSubMeshes.Length;
-            for (int subMeshIndex = 0; subMeshIndex < destinationSubMeshes.Length; subMeshIndex++)
-            {
-                destinationMesh.SetSubMesh(subMeshIndex, destinationSubMeshes[subMeshIndex]);
+                destinationMesh.subMeshCount = destinationSubMeshes.Length;
+                for (int subMeshIndex = 0; subMeshIndex < destinationSubMeshes.Length; subMeshIndex++)
+                {
+                    destinationMesh.SetSubMesh(subMeshIndex, destinationSubMeshes[subMeshIndex]);
+                }
             }
 
         }
