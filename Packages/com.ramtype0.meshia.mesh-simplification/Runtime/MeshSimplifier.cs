@@ -70,14 +70,14 @@ namespace Meshia.MeshSimplification
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
-            using var meshSimplifier = new MeshSimplifier(allocator);
+            var meshSimplifier = new MeshSimplifier(allocator);
 
             var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
 
             var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
             var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
-
+            meshSimplifier.Dispose(simplify);
             JobHandle.ScheduleBatchedJobs();
             simplify.Complete();
 
@@ -175,7 +175,7 @@ namespace Meshia.MeshSimplification
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
-            using var meshSimplifier = new MeshSimplifier(allocator);
+            var meshSimplifier = new MeshSimplifier(allocator);
 
             var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
 
@@ -183,6 +183,7 @@ namespace Meshia.MeshSimplification
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
             var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
 
+            meshSimplifier.Dispose(simplify);
             JobHandle.ScheduleBatchedJobs();
             while (!simplify.IsCompleted)
             {
