@@ -7,16 +7,19 @@ namespace Meshia.MeshSimplification
     unsafe struct CollectVertexMergeOpponmentsJob : IJob
     {
         [ReadOnly]
-        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
+        public NativeArray<VertexMerge> UnorderedDirtyVertexMerges;
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public void Execute()
         {
-            ref readonly var vertexMerges = ref VertexMerges.GetUnsafePriorityQueue()->nodes;
             VertexMergeOpponentVertices.Clear();
-            VertexMergeOpponentVertices.Capacity = vertexMerges.Length * 2;
-            for (int index = 0; index < vertexMerges.Length; index++)
+            VertexMergeOpponentVertices.Capacity = UnorderedDirtyVertexMerges.Length * 2;
+            for (int index = 0; index < UnorderedDirtyVertexMerges.Length; index++)
             {
-                var merge = vertexMerges[index];
+                var merge = UnorderedDirtyVertexMerges[index];
+                if (float.IsPositiveInfinity(merge.Cost))
+                {
+                    continue;
+                }
                 var vertexA = merge.VertexAIndex;
                 var vertexB = merge.VertexBIndex;
                 VertexMergeOpponentVertices.Add(vertexA, vertexB);

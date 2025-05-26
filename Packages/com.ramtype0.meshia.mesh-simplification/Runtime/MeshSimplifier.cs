@@ -396,8 +396,6 @@ namespace Meshia.MeshSimplification
 
             mergePairs.Dispose(constructVertexMerges);
 
-            var constructVertexMergeOpponentVertices = ScheduleInitializeVertexMergeOpponentVertices(constructVertexMerges);
-
             return stackalloc[]
             {
                 dependency,
@@ -429,7 +427,6 @@ namespace Meshia.MeshSimplification
                 constructTriangleNormalsAndErrorQuadrics,
 
                 constructVertexContainingTrianglesAndTriangleDiscardedBits,
-                constructVertexMergeOpponentVertices,
 
                 constructVertexIsDiscardedBits,
                 constructVertexIsBorderEdgeBits,
@@ -872,26 +869,19 @@ namespace Meshia.MeshSimplification
                 edgesDependency,
                 initializeVertexMergesJob,
             }.CombineDependencies());
-
+            var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
+            {
+                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
+                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
+            }.Schedule(computeMergesJob);
             var collectVertexMergesJob = new CollectVertexMergesJob
             {
                 UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
                 VertexMerges = VertexMerges,
             }.Schedule(computeMergesJob);
-            unorderedDirtyVertexMerges.Dispose(collectVertexMergesJob);
-            return collectVertexMergesJob;
-        }
-
-        JobHandle ScheduleInitializeVertexMergeOpponentVertices(
-            JobHandle vertexMergesDependency)
-        {
-            var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
-            {
-                VertexMerges = VertexMerges,
-                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
-            }.Schedule(vertexMergesDependency);
-
-            return collectVertexMergeOpponentsJob;
+            var jobHandle = JobHandle.CombineDependencies(collectVertexMergeOpponentsJob, collectVertexMergesJob);
+            unorderedDirtyVertexMerges.Dispose(jobHandle);
+            return jobHandle;
         }
         
         
