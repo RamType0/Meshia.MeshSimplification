@@ -54,9 +54,7 @@ namespace Meshia.MeshSimplification
         public NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public NativeBitArray VertexIsBorderEdgeBits;
-
-        public unsafe UnsafeMinPriorityQueue<VertexMerge>* VertexMergesPtr;
-        unsafe ref UnsafeMinPriorityQueue<VertexMerge> VertexMerges => ref *VertexMergesPtr;
+        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
         public MeshSimplifierOptions Options;
 
         public NativeBitArray DiscardedVertex;
@@ -161,8 +159,7 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.RelativeVertexCount:
                     {
                         var targetVertexCount = (int)(originalMesh.vertexCount * target.Value);
-                        VertexMerge merge;
-                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out merge))
+                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var merge))
                         {
                             if (IsValidMerge(merge))
                             {

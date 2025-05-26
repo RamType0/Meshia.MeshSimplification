@@ -38,7 +38,7 @@ namespace Meshia.MeshSimplification
         public NativeArray<float3> TriangleNormals;
         public NativeBitArray DiscardedTriangle;
         public NativeBitArray DiscardedVertex;
-        public NativeList<VertexMerge> Merges;
+        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
         public NativeHashSet<int2> SmartLinks;
         public AllocatorManager.AllocatorHandle BlendShapeDataAllocator;
         public MeshSimplifierOptions Options;
@@ -69,7 +69,7 @@ namespace Meshia.MeshSimplification
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexMergeOpponentVertices = VertexMergeOpponentVertices,
                 VertexIsBorderEdgeBits = PreserveVertex,
-                VertexMergesPtr = UnsafeMinPriorityQueue<VertexMerge>.ConvertFromExistingList(Merges.GetUnsafeList()),
+                VertexMerges = VertexMerges,
                 DiscardedVertex = DiscardedVertex,
                 DiscardedTriangle = DiscardedTriangle,
                 VertexCount = VertexPositionBuffer.Length - DiscardedVertex.CountBits(0, DiscardedVertex.Length),

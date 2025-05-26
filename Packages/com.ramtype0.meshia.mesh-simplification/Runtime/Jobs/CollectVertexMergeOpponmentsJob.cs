@@ -4,18 +4,19 @@ using Unity.Jobs;
 namespace Meshia.MeshSimplification
 {
     [BurstCompile]
-    struct CollectVertexMergeOpponmentsJob : IJob
+    unsafe struct CollectVertexMergeOpponmentsJob : IJob
     {
         [ReadOnly]
-        public NativeArray<VertexMerge> VertexMerges;
+        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public void Execute()
         {
+            ref readonly var vertexMerges = ref VertexMerges.GetUnsafePriorityQueue()->nodes;
             VertexMergeOpponentVertices.Clear();
-            VertexMergeOpponentVertices.Capacity = VertexMerges.Length * 2;
-            for (int index = 0; index < VertexMerges.Length; index++)
+            VertexMergeOpponentVertices.Capacity = vertexMerges.Length * 2;
+            for (int index = 0; index < vertexMerges.Length; index++)
             {
-                var merge = VertexMerges[index];
+                var merge = vertexMerges[index];
                 var vertexA = merge.VertexAIndex;
                 var vertexB = merge.VertexBIndex;
                 VertexMergeOpponentVertices.Add(vertexA, vertexB);
