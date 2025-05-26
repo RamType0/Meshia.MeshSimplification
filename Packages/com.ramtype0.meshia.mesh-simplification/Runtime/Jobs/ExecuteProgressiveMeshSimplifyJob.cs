@@ -38,7 +38,7 @@ namespace Meshia.MeshSimplification
         public NativeArray<float3> TriangleNormals;
         public NativeBitArray DiscardedTriangle;
         public NativeBitArray DiscardedVertex;
-        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
+        public NativeKeyedMinPriorityQueue<int2, VertexMerge> VertexMerges;
         public NativeHashSet<int2> SmartLinks;
         public AllocatorManager.AllocatorHandle BlendShapeDataAllocator;
         public MeshSimplifierOptions Options;

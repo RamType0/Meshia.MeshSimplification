@@ -1,29 +1,36 @@
-﻿using Unity.Burst;
+﻿using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 namespace Meshia.MeshSimplification
 {
     [BurstCompile]
     unsafe struct CollectVertexMergesJob : IJob
     {
         [ReadOnly]
-        public NativeArray<VertexMerge> UnorderedDirtyVertexMerges;
-        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
+        public NativeArray<VertexMerge> UnorderedVertexMerges;
+        public NativeKeyedMinPriorityQueue<int2, VertexMerge> VertexMerges;
         public void Execute()
         {
-            ref var vertexMerges = ref VertexMerges.GetUnsafePriorityQueue()->nodes;
+            ref var vertexMerges = ref *VertexMerges.GetUnsafeKeyedMinPriorityQueue();
             vertexMerges.Clear();
-            vertexMerges.SetCapacity(UnorderedDirtyVertexMerges.Length);
-
-            for (int i = 0; i < UnorderedDirtyVertexMerges.Length; i++)
+            if(vertexMerges.nodes.Capacity < UnorderedVertexMerges.Length)
             {
-                var merge = UnorderedDirtyVertexMerges[i];
-                if(!float.IsPositiveInfinity(merge.Cost))
-                {
-                    vertexMerges.AddNoResize(merge);
-                }
+                vertexMerges.nodes.Capacity = UnorderedVertexMerges.Length;
             }
-            VertexMerges.GetUnsafePriorityQueue()->Heapify();
+            if(vertexMerges.keyToIndex.Capacity < UnorderedVertexMerges.Length)
+            {
+                vertexMerges.keyToIndex.Capacity = UnorderedVertexMerges.Length;
+            }
+
+
+            for (int i = 0; i < UnorderedVertexMerges.Length; i++)
+            {
+                var merge = UnorderedVertexMerges[i];
+                vertexMerges.nodes.AddNoResize(KeyValuePair.Create(new int2(math.min(merge.VertexAIndex, merge.VertexBIndex), math.max(merge.VertexAIndex, merge.VertexBIndex)), merge));    
+            }
+            vertexMerges.Heapify();
         }
     }
 }

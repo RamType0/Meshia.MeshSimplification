@@ -54,7 +54,7 @@ namespace Meshia.MeshSimplification
         public NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
         public NativeParallelMultiHashMap<int, int> VertexMergeOpponentVertices;
         public NativeBitArray VertexIsBorderEdgeBits;
-        public NativeMinPriorityQueue<VertexMerge> VertexMerges;
+        public NativeKeyedMinPriorityQueue<int2, VertexMerge> VertexMerges;
         public MeshSimplifierOptions Options;
 
         public NativeBitArray DiscardedVertex;
@@ -159,11 +159,11 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.RelativeVertexCount:
                     {
                         var targetVertexCount = (int)(originalMesh.vertexCount * target.Value);
-                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var merge))
+                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var pair))
                         {
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
+                                ApplyMerge(pair.Value);
                             }
                         }
                     }
@@ -171,11 +171,11 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.AbsoluteVertexCount:
                     {
                         var targetVertexCount = (int)target.Value;
-                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var merge))
+                        while (targetVertexCount < VertexCount && VertexMerges.TryDequeue(out var pair))
                         {
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
+                                ApplyMerge(pair.Value);
                             }
                         }
                     }
@@ -210,13 +210,13 @@ namespace Meshia.MeshSimplification
                         var maxTotalError = target.Value * boundsScale * vertexCountScale;
                         var totalError = 0f;
 
-                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
+                        while (VertexMerges.TryPeek(out var pair) && totalError + pair.Value.Cost < maxTotalError)
                         {
                             VertexMerges.Dequeue();
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
-                                totalError += merge.Cost;
+                                ApplyMerge(pair.Value);
+                                totalError += pair.Value.Cost;
                             }
                         }
                     }
@@ -226,13 +226,13 @@ namespace Meshia.MeshSimplification
                         var maxTotalError = target.Value;
                         var totalError = 0f;
 
-                        while (VertexMerges.TryPeek(out var merge) && totalError + merge.Cost < maxTotalError)
+                        while (VertexMerges.TryPeek(out var pair) && totalError + pair.Value.Cost < maxTotalError)
                         {
                             VertexMerges.Dequeue();
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
-                                totalError += merge.Cost;
+                                ApplyMerge(pair.Value);
+                                totalError += pair.Value.Cost;
                             }
                         }
                     }
@@ -241,11 +241,11 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.RelativeTriangleCount:
                     {
                         var targetTriangleCount = (int)(Triangles.Length * target.Value);
-                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var merge))
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var pair))
                         {
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
+                                ApplyMerge(pair.Value);
                             }
                         }
                     }
@@ -253,11 +253,11 @@ namespace Meshia.MeshSimplification
                 case MeshSimplificationTargetKind.AbsoluteTriangleCount:
                     {
                         var targetTriangleCount = (int)target.Value;
-                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var merge))
+                        while (targetTriangleCount < TriangleCount && VertexMerges.TryDequeue(out var pair))
                         {
-                            if (IsValidMerge(merge))
+                            if (IsValidMerge(pair.Value))
                             {
-                                ApplyMerge(merge);
+                                ApplyMerge(pair.Value);
                             }
                         }
                     }
@@ -389,7 +389,7 @@ namespace Meshia.MeshSimplification
                         {
                             if (MergeFactory.TryComputeMerge(new(vertexA, vertexAOpponentVertex), out var position, out var cost))
                             {
-                                VertexMerges.Enqueue(new VertexMerge
+                                VertexMerges[new(math.min(vertexA,  vertexAOpponentVertex), math.max(vertexA, vertexAOpponentVertex))] = new VertexMerge
                                 {
                                     VertexAIndex = vertexA,
                                     VertexBIndex = vertexAOpponentVertex,
@@ -397,7 +397,7 @@ namespace Meshia.MeshSimplification
                                     VertexBVersion = VertexVersions[vertexAOpponentVertex],
                                     Position = position,
                                     Cost = cost,
-                                });
+                                };
                             }
 
                         }
@@ -426,7 +426,7 @@ namespace Meshia.MeshSimplification
 
                                 if (MergeFactory.TryComputeMerge(new(vertexA, vertexBOpponentVertex), out var position, out var cost))
                                 {
-                                    VertexMerges.Enqueue(new VertexMerge
+                                    VertexMerges[new(math.min(vertexA, vertexBOpponentVertex), math.max(vertexA, vertexBOpponentVertex))] = new VertexMerge
                                     {
                                         VertexAIndex = vertexA,
                                         VertexBIndex = vertexBOpponentVertex,
@@ -434,7 +434,7 @@ namespace Meshia.MeshSimplification
                                         VertexBVersion = VertexVersions[vertexBOpponentVertex],
                                         Position = position,
                                         Cost = cost,
-                                    });
+                                    };
                                     VertexMergeOpponentVertices.Add(vertexA, vertexBOpponentVertex);
                                     VertexMergeOpponentVertices.Add(vertexBOpponentVertex, vertexA);
                                 }

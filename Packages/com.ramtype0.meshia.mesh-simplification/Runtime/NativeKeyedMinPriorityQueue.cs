@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -10,22 +11,24 @@ using Unity.Jobs;
 namespace Meshia.MeshSimplification
 {
     [NativeContainer]
-    unsafe struct NativeMinPriorityQueue<T> : INativeDisposable
-        where T : unmanaged, IComparable<T>
+    unsafe struct NativeKeyedMinPriorityQueue
+        <TKey, TValue> : INativeDisposable
+        where TKey : unmanaged, IEquatable<TKey>
+        where TValue : unmanaged, IComparable<TValue>
     {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
         internal AtomicSafetyHandle m_Safety;
-        internal static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeMinPriorityQueue<T>>();
+        internal static readonly SharedStatic<int> s_staticSafetyId = SharedStatic<int>.GetOrCreate<NativeKeyedMinPriorityQueue<TKey, TValue>>();
 #endif
 
         [NativeDisableUnsafePtrRestriction]
-        UnsafeMinPriorityQueue<T>* priorityQueueData;
-        public NativeMinPriorityQueue(AllocatorManager.AllocatorHandle allocator): this(1, allocator)
+        UnsafeKeyedMinPriorityQueue<TKey, TValue>* priorityQueueData;
+        public NativeKeyedMinPriorityQueue(AllocatorManager.AllocatorHandle allocator): this(1, allocator)
         {
             
         }
         
-        public NativeMinPriorityQueue(int initialCapacity, AllocatorManager.AllocatorHandle allocator, NativeArrayOptions options = NativeArrayOptions.UninitializedMemory)
+        public NativeKeyedMinPriorityQueue(int initialCapacity, AllocatorManager.AllocatorHandle allocator)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CheckAllocator(allocator.Handle);
@@ -33,13 +36,13 @@ namespace Meshia.MeshSimplification
 
             m_Safety = CollectionHelper.CreateSafetyHandle(allocator.Handle);
 
-            CollectionHelper.SetStaticSafetyId<NativeMinPriorityQueue<T>>(ref m_Safety, ref s_staticSafetyId.Data);
+            CollectionHelper.SetStaticSafetyId<NativeKeyedMinPriorityQueue<TKey, TValue>>(ref m_Safety, ref s_staticSafetyId.Data);
 
             AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(m_Safety, true);
 #endif
-            priorityQueueData = UnsafeMinPriorityQueue<T>.Create(initialCapacity, allocator, options);
+            priorityQueueData = UnsafeKeyedMinPriorityQueue<TKey, TValue>.Create(initialCapacity, allocator);
         }
-        public readonly UnsafeMinPriorityQueue<T>* GetUnsafePriorityQueue() => priorityQueueData;
+        public readonly UnsafeKeyedMinPriorityQueue<TKey, TValue>* GetUnsafeKeyedMinPriorityQueue() => priorityQueueData;
         public readonly int Count
         {
             get
@@ -50,35 +53,46 @@ namespace Meshia.MeshSimplification
                 return priorityQueueData->Count;
             }
         }
-        public readonly void Enqueue(T element)
+        public readonly TValue this[TKey key]
         {
+            get
+            {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
+                AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-            priorityQueueData->Enqueue(element);
+                return (*priorityQueueData)[key];
+            }
+            set
+            {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
+#endif
+                (*priorityQueueData)[key] = value;
+            }
         }
-        public readonly T Peek()
+
+        public readonly KeyValuePair<TKey, TValue> Peek()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
             return priorityQueueData->Peek();
         }
-        public readonly T Dequeue()
+        public readonly KeyValuePair<TKey, TValue> Dequeue()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
             return priorityQueueData->Dequeue();
         }
-        public readonly bool TryDequeue([MaybeNullWhen(false)] out T element)
+        public readonly bool TryDequeue([MaybeNullWhen(false)] out KeyValuePair<TKey, TValue> element)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
             return priorityQueueData->TryDequeue(out element);
         }
-        public readonly bool TryPeek([MaybeNullWhen(false)] out T element)
+        public readonly bool TryPeek([MaybeNullWhen(false)] out KeyValuePair<TKey, TValue> element)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
@@ -86,13 +100,6 @@ namespace Meshia.MeshSimplification
             return priorityQueueData->TryPeek(out element);
         }
 
-        public readonly void EnqueueRange(ReadOnlySpan<T> elements)
-        {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
-#endif
-            priorityQueueData->EnqueueRange(elements);
-        }
         public readonly void Clear()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -119,7 +126,7 @@ namespace Meshia.MeshSimplification
                 return inputDeps;
             }
 
-            var jobHandle = new NativeMinPriorityQueueDisposeJob
+            var jobHandle = new NativeKeyedMinPriorityQueueDisposeJob
             {
                 Data = new()
                 {
@@ -153,29 +160,29 @@ namespace Meshia.MeshSimplification
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             CollectionHelper.DisposeSafetyHandle(ref m_Safety);
 #endif
-            UnsafeMinPriorityQueue<T>.Destroy(priorityQueueData);
+            UnsafeKeyedMinPriorityQueue<TKey, TValue>.Destroy(priorityQueueData);
             priorityQueueData = null;
         }
 
         [NativeContainer]
         [GenerateTestsForBurstCompatibility]
-        unsafe struct NativeMinPriorityQueueDispose
+        unsafe struct NativeKeyedMinPriorityQueueDispose
         {
             [NativeDisableUnsafePtrRestriction]
-            public UnsafeMinPriorityQueue<T>* priorityQueueData;
+            public UnsafeKeyedMinPriorityQueue<TKey, TValue>* priorityQueueData;
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             internal AtomicSafetyHandle m_Safety;
 #endif
             public readonly void Dispose()
             {
-                UnsafeMinPriorityQueue<T>.Destroy(priorityQueueData);
+                UnsafeKeyedMinPriorityQueue<TKey, TValue>.Destroy(priorityQueueData);
             }
         }
         [BurstCompile]
         [GenerateTestsForBurstCompatibility]
-        unsafe struct NativeMinPriorityQueueDisposeJob : IJob
+        unsafe struct NativeKeyedMinPriorityQueueDisposeJob : IJob
         {
-            internal NativeMinPriorityQueueDispose Data;
+            internal NativeKeyedMinPriorityQueueDispose Data;
 
             public readonly void Execute()
             {

@@ -50,7 +50,7 @@ namespace Meshia.MeshSimplification
 
         NativeHashSet<int2> SmartLinks;
 
-        NativeMinPriorityQueue<VertexMerge> VertexMerges;
+        NativeKeyedMinPriorityQueue<int2, VertexMerge> VertexMerges;
 
         MeshSimplifierOptions Options;
 
@@ -221,7 +221,7 @@ namespace Meshia.MeshSimplification
 
         private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<BlendShapeData> simplifiedBlendShapes, Mesh destination)
         {
-            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices);
+            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination);
             CopyBoundsAndBindposes(mesh, destination);
             BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
         }
@@ -249,7 +249,7 @@ namespace Meshia.MeshSimplification
 
         private static void ApplySimplifiedMeshes(List<Mesh> meshes, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<NativeList<BlendShapeData>> simplifiedBlendShapesList, List<Mesh> destinations)
         {
-            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destinations, MeshUpdateFlags.DontValidateIndices);
+            Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destinations);
             for (int i = 0; i < meshes.Count; i++)
             {
                 var mesh = meshes[i];
@@ -301,7 +301,7 @@ namespace Meshia.MeshSimplification
 
             SmartLinks = new(0, allocator);
 
-            VertexMerges = new(allocator);
+            VertexMerges = new(0, allocator);
             Options = default;
 
             Allocator = allocator;
@@ -841,11 +841,11 @@ namespace Meshia.MeshSimplification
             JobHandle edgesDependency
             )
         {
-            NativeList<VertexMerge> unorderedDirtyVertexMerges = new(Allocator);
+            NativeList<VertexMerge> unorderedVertexMerges = new(Allocator);
             var initializeVertexMergesJob = new InitializeUnorderedDirtyVertexMergesJob
             {
                 Edges = edges.AsDeferredJobArray(),
-                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges,
+                UnorderedDirtyVertexMerges = unorderedVertexMerges,
             }.Schedule(edgesDependency);
 
             var computeMergesJob = new ComputeMergesJob
@@ -856,7 +856,7 @@ namespace Meshia.MeshSimplification
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
                 Edges = edges.AsDeferredJobArray(),
-                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
+                UnorderedDirtyVertexMerges = unorderedVertexMerges.AsDeferredJobArray(),
                 Options = Options,
             }.Schedule(edges, JobsUtility.CacheLineSize,
             stackalloc[]
@@ -869,18 +869,23 @@ namespace Meshia.MeshSimplification
                 edgesDependency,
                 initializeVertexMergesJob,
             }.CombineDependencies());
+            var removeInvalidVertexMergesJob = new RemoveInvalidVertexMergesJob
+            {
+                UnorderedDirtyVertexMerges = unorderedVertexMerges,
+            }.Schedule(computeMergesJob);
+
             var collectVertexMergeOpponentsJob = new CollectVertexMergeOpponmentsJob
             {
-                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
+                UnorderedVertexMerges = unorderedVertexMerges.AsDeferredJobArray(),
                 VertexMergeOpponentVertices = VertexMergeOpponentVertices,
-            }.Schedule(computeMergesJob);
+            }.Schedule(removeInvalidVertexMergesJob);
             var collectVertexMergesJob = new CollectVertexMergesJob
             {
-                UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
+                UnorderedVertexMerges = unorderedVertexMerges.AsDeferredJobArray(),
                 VertexMerges = VertexMerges,
-            }.Schedule(computeMergesJob);
+            }.Schedule(removeInvalidVertexMergesJob);
             var jobHandle = JobHandle.CombineDependencies(collectVertexMergeOpponentsJob, collectVertexMergesJob);
-            unorderedDirtyVertexMerges.Dispose(jobHandle);
+            unorderedVertexMerges.Dispose(jobHandle);
             return jobHandle;
         }
         
