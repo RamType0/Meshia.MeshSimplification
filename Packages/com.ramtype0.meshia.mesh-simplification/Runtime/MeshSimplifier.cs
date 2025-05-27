@@ -449,7 +449,7 @@ namespace Meshia.MeshSimplification
         /// Creates and schedules a job that will simplify the mesh data.
         /// </summary>
         /// <param name="meshData">The mesh data to simplify. It must be the same with the mesh which was passed to <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>.</param>
-        /// <param name="blendShapes">The blend shapes of the<paramref name="meshData"/>.</param>
+        /// <param name="blendShapes">The blend shapes of the <paramref name="meshData"/>.</param>
         /// <param name="target">The simplification target for this mesh simplification.</param>
         /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
         /// <returns>The handle of the new job.</returns>
@@ -499,7 +499,7 @@ namespace Meshia.MeshSimplification
         /// Creates and schedules a job that will simplify the mesh data..
         /// </summary>
         /// <param name="meshData">The original mesh data.</param>
-        /// <param name="blendShapes">The blend shapes of the<paramref name="meshData"/>.</param>
+        /// <param name="blendShapes">The blend shapes of the <paramref name="meshData"/>.</param>
         /// <param name="destinationMeshData">The destination to write simplified mesh data.</param>
         /// <param name="destinationBlendShapes">The destination to write simplified blend shapes.</param>
         /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
