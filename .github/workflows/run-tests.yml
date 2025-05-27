@@ -53,6 +53,7 @@ jobs:
 
      - uses: game-ci/unity-test-runner@v4
        with:
+         unityVersion: ${{ matrix.unityVersion }}
          testMode: ${{ matrix.testMode }}
          artifactsPath: ${{ matrix.testMode }}-artifacts
          githubToken: ${{ secrets.GITHUB_TOKEN }}
@@ -60,14 +61,14 @@ jobs:
          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+my.assembly.*'
          working-directory: ${{ env.WORKING_DIRECTORY }}
 
-     - uses: actions/upload-artifact@v3
+     - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Test results for ${{ matrix.testMode }}
+         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.tests.outputs.artifactsPath }}
 
-     - uses: actions/upload-artifact@v3
+     - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Coverage results for ${{ matrix.testMode }}
+         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
          path: ${{ env.WORKING_DIRECTORY }}/${{ steps.tests.outputs.coveragePath }}
