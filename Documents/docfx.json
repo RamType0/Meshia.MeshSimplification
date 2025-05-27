@@ -44,6 +44,7 @@
       "_appName": "Meshia.MeshSimplification",
       "_appTitle": "Meshia.MeshSimplification",
       "_appLogoPath": "images/logo.svg",
+      "_appFaviconPath": "images/logo.svg",
       "_enableSearch": true
     }
   }
