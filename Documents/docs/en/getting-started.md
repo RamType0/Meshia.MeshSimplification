@@ -16,7 +16,7 @@ You can preview the result in EditMode.
 
 ### Call from C#
 
-```C#
+```csharp
 
 using Meshia.MeshSimplification;
 

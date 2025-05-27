@@ -15,7 +15,7 @@ NDMFがプロジェクトにインポートされている場合、`MeshiaMeshSi
 
 ### C#から呼び出す
 
-```C#
+```csharp
 
 using Meshia.MeshSimplification;
 

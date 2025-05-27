@@ -32,7 +32,7 @@ You can preview the result in EditMode.
 
 #### Call from C#
 
-```C#
+```csharp
 
 using Meshia.MeshSimplification;
 
@@ -69,7 +69,7 @@ NDMFがプロジェクトにインポートされている場合、`MeshiaMeshSi
 
 #### C#から呼び出す
 
-```C#
+```csharp
 
 using Meshia.MeshSimplification;
 
