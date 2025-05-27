@@ -115,7 +115,7 @@ namespace Meshia.MeshSimplification
                 cost = vertexError + curvatureError;
                 return true;
             }
-            
+
         }
         float ComputeCurvatureError(int2 vertices)
         {

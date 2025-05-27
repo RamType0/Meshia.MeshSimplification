@@ -33,7 +33,7 @@ namespace Meshia.MeshSimplification
         public MeshSimplifierOptions Options;
 
         public NativeArray<UnsafeList<int2>> SubMeshSmartLinkLists;
-        
+
         public void Execute(int subMeshIndex)
         {
             ref var subMeshSmartLinkList = ref SubMeshSmartLinkLists.ElementAt(subMeshIndex);
@@ -45,7 +45,7 @@ namespace Meshia.MeshSimplification
             while (subMeshSmartLinkIndex < subMeshSmartLinkList.Length)
             {
                 var link = subMeshSmartLinkList[subMeshSmartLinkIndex];
-                if(
+                if (
                        (VertexNormalBuffer.Length == 0 || Options.VertexLinkMinNormalDot <= NormalDot(link))
                     && (VertexColorBuffer.Length == 0 || SquaredDistance(VertexColorBuffer, link) < squaredMaxColorDistance)
                     && (VertexTexCoord0Buffer.Length == 0 || SquaredDistance(VertexTexCoord0Buffer, link) < squaredMaxUvDistance)

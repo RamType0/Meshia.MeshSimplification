@@ -38,6 +38,8 @@ namespace Meshia.MeshSimplification
 
         NativeList<ErrorQuadric> VertexErrorQuadrics;
 
+        NativeList<int> VertexVersions;
+
         NativeList<int3> Triangles;
         NativeList<float3> TriangleNormals;
 
@@ -62,7 +64,7 @@ namespace Meshia.MeshSimplification
         /// <param name="target">The simplification target for this mesh simplification.</param>
         /// <param name="options">The options for this mesh simplification.</param>
         /// <param name="destination">The destination to write simplified mesh.</param>
-        /// <remarks>The <paramref name="mesh"/> will not be modified.</remarks>
+        /// <remarks>To process multiple meshes at once, use <see cref="SimplifyBatch(IReadOnlyList{ValueTuple{Mesh, MeshSimplificationTarget, MeshSimplifierOptions, Mesh}})"/> instead.</remarks>
         public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination)
         {
             Allocator allocator = Unity.Collections.Allocator.TempJob;
@@ -76,10 +78,11 @@ namespace Meshia.MeshSimplification
 
             var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
-            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
-            meshSimplifier.Dispose(simplify);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+            var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[0], simplifiedBlendShapes, simplify);
+            meshSimplifier.Dispose(write);
             JobHandle.ScheduleBatchedJobs();
-            simplify.Complete();
+            write.Complete();
 
             originalMeshDataArray.Dispose();
 
@@ -116,7 +119,7 @@ namespace Meshia.MeshSimplification
 
                 var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(meshes);
                 var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(originalMeshDataArray.Length);
-                
+
                 for (int i = 0; i < parameters.Count; i++)
                 {
                     var (mesh, target, options, destination) = parameters[i];
@@ -124,14 +127,14 @@ namespace Meshia.MeshSimplification
                     var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
                     blendShapesList[i] = blendShapes;
                     var meshSimplifier = new MeshSimplifier(allocator);
-                    var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options); 
+                    var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
                     NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
                     simplifiedBlendShapesList[i] = simplifiedBlendShapes;
 
-                    var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[i], simplifiedBlendShapes, load);
-
-                    meshSimplifier.Dispose(simplify);
-                    jobHandles[i] = simplify;
+                    var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+                    var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[i], simplifiedBlendShapes, simplify);
+                    meshSimplifier.Dispose(write);
+                    jobHandles[i] = write;
 
                 }
                 JobHandle.ScheduleBatchedJobs();
@@ -156,7 +159,7 @@ namespace Meshia.MeshSimplification
                 }
             }
 
-            
+
         }
         /// <summary>
         /// Asynchronously simplifies the given <paramref name="mesh"/> and writes the result to <paramref name="destination"/>.
@@ -166,8 +169,7 @@ namespace Meshia.MeshSimplification
         /// <param name="options">The options for this mesh simplification.</param>
         /// <param name="destination">The destination to write simplified mesh.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
-        /// <returns></returns>
-        /// <remarks>The <paramref name="mesh"/> will not be modified.</remarks>
+        /// <returns>A task that represents the asynchronous mesh simplification operation.</returns>
         public static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination, CancellationToken cancellationToken = default)
         {
             Allocator allocator = Unity.Collections.Allocator.Persistent;
@@ -181,15 +183,15 @@ namespace Meshia.MeshSimplification
 
             var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
-            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, simplifiedMeshDataArray[0], simplifiedBlendShapes, load);
-
-            meshSimplifier.Dispose(simplify);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+            var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[0], simplifiedBlendShapes, simplify);
+            meshSimplifier.Dispose(write);
             JobHandle.ScheduleBatchedJobs();
-            while (!simplify.IsCompleted)
+            while (!write.IsCompleted)
             {
                 await Task.Yield();
             }
-            simplify.Complete();
+            write.Complete();
 
             originalMeshDataArray.Dispose();
 
@@ -289,6 +291,9 @@ namespace Meshia.MeshSimplification
 
             VertexErrorQuadrics = new(allocator);
 
+
+            VertexVersions = new(allocator);
+
             Triangles = new(allocator);
             TriangleNormals = new(allocator);
 
@@ -334,6 +339,7 @@ namespace Meshia.MeshSimplification
             var constructVertexBlendIndicesBuffer = ScheduleCopyVertexBlendIndicesBuffer(meshData, dependency);
 
             var collectVertexContainingSubMeshIndices = ScheduleCollectVertexContainingSubMeshIndices(meshData, dependency);
+            var initializeVertexVersions = ScheduleInitializeVertexVersions(meshData, dependency);
 
             var constructTriangles = ScheduleCopyTriangles(meshData, dependency);
 
@@ -421,6 +427,8 @@ namespace Meshia.MeshSimplification
 
                 collectVertexContainingSubMeshIndices,
 
+                initializeVertexVersions,
+
                 constructVertexErrorQuadrics,
 
                 constructTriangles,
@@ -438,11 +446,60 @@ namespace Meshia.MeshSimplification
 
         }
         /// <summary>
-        /// Creates and schedules a job that will simplify the mesh data..
+        /// Creates and schedules a job that will simplify the mesh data.
         /// </summary>
         /// <param name="meshData">The mesh data to simplify. It must be the same with the mesh which was passed to <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>.</param>
         /// <param name="blendShapes">The blend shapes of the<paramref name="meshData"/>.</param>
         /// <param name="target">The simplification target for this mesh simplification.</param>
+        /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
+        /// <returns>The handle of the new job.</returns>
+        /// <remarks>
+        /// After you call <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>, you can call this method repeatedly to incrementally simplify the same mesh data with different targets.
+        /// </remarks>
+        public JobHandle ScheduleSimplify(Mesh.MeshData meshData, NativeList<BlendShapeData> blendShapes, MeshSimplificationTarget target, JobHandle dependency)
+        {
+            return new SimplifyJob
+            {
+                Mesh = meshData,
+                SimplificationTarget = target,
+                VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
+                VertexNormalBuffer = VertexNormalBuffer.AsDeferredJobArray(),
+                VertexTangentBuffer = VertexTangentBuffer.AsDeferredJobArray(),
+                VertexColorBuffer = VertexColorBuffer.AsDeferredJobArray(),
+                VertexTexCoord0Buffer = VertexTexCoord0Buffer.AsDeferredJobArray(),
+                VertexTexCoord1Buffer = VertexTexCoord1Buffer.AsDeferredJobArray(),
+                VertexTexCoord2Buffer = VertexTexCoord2Buffer.AsDeferredJobArray(),
+                VertexTexCoord3Buffer = VertexTexCoord3Buffer.AsDeferredJobArray(),
+                VertexTexCoord4Buffer = VertexTexCoord4Buffer.AsDeferredJobArray(),
+                VertexTexCoord5Buffer = VertexTexCoord5Buffer.AsDeferredJobArray(),
+                VertexTexCoord6Buffer = VertexTexCoord6Buffer.AsDeferredJobArray(),
+                VertexTexCoord7Buffer = VertexTexCoord7Buffer.AsDeferredJobArray(),
+                BlendShapes = blendShapes,
+                VertexBlendWeightBuffer = VertexBlendWeightBuffer.AsDeferredJobArray(),
+                VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
+                VertexContainingSubMeshIndices = VertexContainingSubMeshIndices.AsDeferredJobArray(),
+                VertexVersions = VertexVersions.AsDeferredJobArray(),
+                Triangles = Triangles.AsDeferredJobArray(),
+                TriangleNormals = TriangleNormals.AsDeferredJobArray(),
+                VertexContainingTriangles = VertexContainingTriangles,
+                VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
+                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
+                DiscardedTriangle = TriangleIsDiscardedBits,
+                DiscardedVertex = VertexIsDiscardedBits,
+                VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
+                Options = Options,
+                VertexMerges = VertexMerges,
+
+                SmartLinks = SmartLinks,
+            }.Schedule(dependency);
+        }
+
+
+        /// <summary>
+        /// Creates and schedules a job that will simplify the mesh data..
+        /// </summary>
+        /// <param name="meshData">The original mesh data.</param>
+        /// <param name="blendShapes">The blend shapes of the<paramref name="meshData"/>.</param>
         /// <param name="destinationMeshData">The destination to write simplified mesh data.</param>
         /// <param name="destinationBlendShapes">The destination to write simplified blend shapes.</param>
         /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
@@ -450,12 +507,11 @@ namespace Meshia.MeshSimplification
         /// <remarks>
         /// After you call <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>, you can call this method repeatedly to incrementally simplify the same mesh data with different targets.
         /// </remarks>
-        public JobHandle ScheduleSimplify(Mesh.MeshData meshData, NativeList<BlendShapeData> blendShapes, MeshSimplificationTarget target, Mesh.MeshData destinationMeshData, NativeList<BlendShapeData> destinationBlendShapes, JobHandle dependency)
+        public JobHandle ScheduleWriteMeshData(Mesh.MeshData meshData, NativeList<BlendShapeData> blendShapes, Mesh.MeshData destinationMeshData, NativeList<BlendShapeData> destinationBlendShapes, JobHandle dependency)
         {
-            return new ExecuteProgressiveMeshSimplifyJob
+            return new WriteToMeshDataJob
             {
-                Mesh = meshData,
-                Target = target,
+                SourceMesh = meshData,
                 DestinationMesh = destinationMeshData,
                 DestinationBlendShapes = destinationBlendShapes,
                 VertexPositionBuffer = VertexPositionBuffer.AsDeferredJobArray(),
@@ -475,17 +531,9 @@ namespace Meshia.MeshSimplification
                 VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
                 VertexContainingSubMeshIndices = VertexContainingSubMeshIndices.AsDeferredJobArray(),
                 Triangles = Triangles.AsDeferredJobArray(),
-                TriangleNormals = TriangleNormals.AsDeferredJobArray(),
-                VertexContainingTriangles = VertexContainingTriangles,
-                VertexErrorQuadrics = VertexErrorQuadrics.AsDeferredJobArray(),
-                VertexMergeOpponentVertices = VertexMergeOpponentVertices,
                 DiscardedTriangle = TriangleIsDiscardedBits,
                 DiscardedVertex = VertexIsDiscardedBits,
-                PreserveVertex = VertexIsBorderEdgeBits,
-                Options = Options,
-                VertexMerges = VertexMerges,
-                BlendShapeDataAllocator = Allocator,
-                SmartLinks = SmartLinks,
+                Allocator = Allocator,
             }.Schedule(dependency);
         }
         /// <summary>
@@ -517,6 +565,7 @@ namespace Meshia.MeshSimplification
                 VertexContainingSubMeshIndices.Dispose(inputDeps),
 
                 VertexErrorQuadrics.Dispose(inputDeps),
+                VertexVersions.Dispose(inputDeps),
                 Triangles.Dispose(inputDeps),
                 TriangleNormals.Dispose(inputDeps),
                 VertexMergeOpponentVertices.Dispose(inputDeps),
@@ -554,6 +603,7 @@ namespace Meshia.MeshSimplification
             VertexContainingSubMeshIndices.Dispose();
 
             VertexErrorQuadrics.Dispose();
+            VertexVersions.Dispose();
             Triangles.Dispose();
             TriangleNormals.Dispose();
             VertexMergeOpponentVertices.Dispose();
@@ -565,7 +615,7 @@ namespace Meshia.MeshSimplification
             SmartLinks.Dispose();
             VertexMerges.Dispose();
         }
-        
+
 
         JobHandle ScheduleCopyVertexPositionBuffer(Mesh.MeshData meshData, JobHandle meshDependency)
         {
@@ -623,6 +673,17 @@ namespace Meshia.MeshSimplification
                 VertexContainingSubMeshIndices = VertexContainingSubMeshIndices,
             }.Schedule(meshDependency);
         }
+
+        JobHandle ScheduleInitializeVertexVersions(Mesh.MeshData mesh, JobHandle meshDependency)
+        {
+            return new InitializeVertexListJob<int>
+            {
+                MeshData = mesh,
+                Buffer = VertexVersions,
+                Options = NativeArrayOptions.ClearMemory,
+            }.Schedule(meshDependency);
+        }
+
         JobHandle ScheduleCopyTriangles(Mesh.MeshData mesh, JobHandle meshDependency)
         {
             return new CopyTrianglesJob
@@ -747,8 +808,8 @@ namespace Meshia.MeshSimplification
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
             }.Schedule(JobHandle.CombineDependencies(meshDependency, edgesDependency));
         }
-        
-        
+
+
         JobHandle ScheduleInitializeTriangleNormalsAndTriangleErrorQuadrics(
             Mesh.MeshData mesh,
             NativeList<ErrorQuadric> triangleErrorQuadrics,
@@ -883,7 +944,7 @@ namespace Meshia.MeshSimplification
             unorderedDirtyVertexMerges.Dispose(jobHandle);
             return jobHandle;
         }
-        
-        
+
+
     }
 }

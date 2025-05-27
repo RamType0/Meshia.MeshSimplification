@@ -20,11 +20,11 @@ namespace Meshia.MeshSimplification
 
         [NativeDisableUnsafePtrRestriction]
         UnsafeMinPriorityQueue<T>* priorityQueueData;
-        public NativeMinPriorityQueue(AllocatorManager.AllocatorHandle allocator): this(1, allocator)
+        public NativeMinPriorityQueue(AllocatorManager.AllocatorHandle allocator) : this(1, allocator)
         {
-            
+
         }
-        
+
         public NativeMinPriorityQueue(int initialCapacity, AllocatorManager.AllocatorHandle allocator, NativeArrayOptions options = NativeArrayOptions.UninitializedMemory)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -183,7 +183,7 @@ namespace Meshia.MeshSimplification
             }
         }
 
-            [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS"), Conditional("UNITY_DOTS_DEBUG")]
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS"), Conditional("UNITY_DOTS_DEBUG")]
         internal static void CheckAllocator(AllocatorManager.AllocatorHandle allocator)
         {
             if (allocator.ToAllocator <= Allocator.None)

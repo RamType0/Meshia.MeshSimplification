@@ -18,16 +18,30 @@ namespace Meshia.MeshSimplification
             VertexLinkUvDistance = 0.001f,
         };
 
+        /// <summary>
+        /// If you want to suppress hole generation during simplification, enable this option.
+        /// </summary>
         [Tooltip("If you want to suppress hole generation during simplification, enable this option.")]
         public bool PreserveBorderEdges;
         public bool PreserveSurfaceCurvature;
+        /// <summary>
+        /// If you find that the texture is distorted, try toggling this option.
+        /// </summary>
         [Tooltip("If you find that the texture is distorted, try toggling this option.")]
         public bool UseBarycentricCoordinateInterpolation;
+        /// <summary>
+        /// If this option is enabled, vertices that are not originally connected but are close to each other will be included in the first merge candidates. <br/>
+        /// Increases the initialization cost.
+        /// </summary>
         [Tooltip("If this option is enabled, vertices that are not originally connected but are close to each other will be included in the first merge candidates. \n" +
             "Increases the initialization cost.")]
         public bool EnableSmartLink;
-        [Range(-1,1)]
+        [Range(-1, 1)]
         public float MinNormalDot;
+        /// <summary>
+        /// When smart link is enabled, this is used to select candidates for merging vertices that are not originally connected to each other. <br/>
+        /// Increasing this value also increases the initialization cost.
+        /// </summary>
         [Tooltip("When smart link is enabled, this is used to select candidates for merging vertices that are not originally connected to each other. \n" +
             "Increasing this value also increases the initialization cost.")]
         public float VertexLinkDistance;
@@ -38,7 +52,7 @@ namespace Meshia.MeshSimplification
         [Range(0, 1.41421356237f)]
         public float VertexLinkUvDistance;
 
-        
+
 
         public readonly override bool Equals(object obj)
         {

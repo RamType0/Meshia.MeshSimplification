@@ -40,9 +40,9 @@ namespace Meshia.MeshSimplification
             queue->Dispose();
             AllocatorManager.Free(allocator, queue);
         }
-        
-        
-        
+
+
+
         /// <summary>
         /// Convert existing <see cref="NativeList{T}"/> to <see cref="UnsafeMinPriorityQueue{T}"/>. modifying <paramref name="list"/> after call this method will be resulted in unexpected behaviour.
         /// </summary>
@@ -141,11 +141,11 @@ namespace Meshia.MeshSimplification
 
             if (nodes.IsEmpty)
             {
-                fixed(T* ptr = elements)
+                fixed (T* ptr = elements)
                 {
                     nodes.AddRangeNoResize(ptr, elements.Length);
                 }
-                if(Count > 1)
+                if (Count > 1)
                 {
                     Heapify();
                 }
@@ -158,7 +158,7 @@ namespace Meshia.MeshSimplification
                 }
             }
 
-                
+
         }
 
         public void Clear() => nodes.Clear();
@@ -209,7 +209,7 @@ namespace Meshia.MeshSimplification
         /// </summary>
         void MoveUp(T node, int nodeIndex)
         {
-            while(nodeIndex > 0)
+            while (nodeIndex > 0)
             {
                 var parentIndex = GetParentIndex(nodeIndex);
                 var parent = nodes[parentIndex];
@@ -231,16 +231,16 @@ namespace Meshia.MeshSimplification
         void MoveDown(T node, int nodeIndex)
         {
             int i;
-            while((i = GetFirstChildIndex(nodeIndex)) < nodes.Length)
+            while ((i = GetFirstChildIndex(nodeIndex)) < nodes.Length)
             {
                 // Find the child node with the minimal priority
                 var minChild = nodes[i];
                 var minChildIndex = i;
                 var childIndexUpperBound = math.min(i + Arity, nodes.Length);
-                while(++i < childIndexUpperBound)
+                while (++i < childIndexUpperBound)
                 {
                     var nextChild = nodes[i];
-                    if(nextChild.CompareTo(minChild) < 0)
+                    if (nextChild.CompareTo(minChild) < 0)
                     {
                         minChild = nextChild;
                         minChildIndex = i;

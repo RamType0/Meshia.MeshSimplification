@@ -18,7 +18,7 @@ namespace Meshia.MeshSimplification
             for (int i = 0; i < UnorderedDirtyVertexMerges.Length; i++)
             {
                 var merge = UnorderedDirtyVertexMerges[i];
-                if(!float.IsPositiveInfinity(merge.Cost))
+                if (!float.IsPositiveInfinity(merge.Cost))
                 {
                     vertexMerges.AddNoResize(merge);
                 }
