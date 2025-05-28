@@ -3,13 +3,11 @@ name: Run Tests
 on:
  workflow_dispatch:
  push:
- pull_request:
+ pull_request_target:
 
 env:
  WORKING_DIRECTORY: .
  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
- UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
- UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
 jobs:
  test:
