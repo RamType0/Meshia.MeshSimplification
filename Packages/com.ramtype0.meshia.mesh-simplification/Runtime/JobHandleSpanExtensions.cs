@@ -7,7 +7,7 @@ namespace Meshia.MeshSimplification
     {
         public static unsafe JobHandle CombineDependencies(this ReadOnlySpan<JobHandle> jobHandles)
         {
-            fixed(JobHandle* jobHandlesPtr = jobHandles)
+            fixed (JobHandle* jobHandlesPtr = jobHandles)
             {
                 return JobHandleUnsafeUtility.CombineDependencies(jobHandlesPtr, jobHandles.Length);
             }

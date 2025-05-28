@@ -1,7 +1,6 @@
 ﻿using System;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 namespace Meshia.MeshSimplification
@@ -17,7 +16,7 @@ namespace Meshia.MeshSimplification
         {
             var weight = mesh.GetBlendShapeFrameWeight(shapeIndex, frameIndex);
             mesh.GetBlendShapeFrameVertices(shapeIndex, frameIndex, deltaVerticesBuffer, deltaNormalsBuffer, deltaTangentsBuffer);
-            
+
             UnsafeList<float3> deltaVertices = new(deltaVerticesBuffer.Length, allocator);
             deltaVertices.Resize(deltaVerticesBuffer.Length);
             deltaVerticesBuffer.AsSpan().CopyTo(new(deltaVertices.Ptr, deltaVertices.Length));

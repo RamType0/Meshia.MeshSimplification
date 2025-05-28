@@ -64,16 +64,16 @@ namespace Meshia.MeshSimplification
         }
     }
     [BurstCompile]
-    struct InitializeVertexMergesJob : IJob
+    struct InitializeUnorderedDirtyVertexMergesJob : IJob
     {
 
         [ReadOnly]
         public NativeArray<int2> Edges;
-        public NativeList<VertexMerge> VertexMerges;
+        public NativeList<VertexMerge> UnorderedDirtyVertexMerges;
 
         public void Execute()
         {
-            VertexMerges.ResizeUninitialized(Edges.Length);
+            UnorderedDirtyVertexMerges.ResizeUninitialized(Edges.Length);
         }
     }
 }

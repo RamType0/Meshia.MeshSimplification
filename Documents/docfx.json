@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../Packages/com.ramtype0.meshia.mesh-simplification",
+          "files": [
+            "Runtime/**/*.cs"
+          ],
+          "exclude":[
+            "Runtime/Tests/**/*.cs"
+          ]
+        }
+      ],
+      "dest": "api",
+      "allowCompilationErrors": true
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.{md,yml}"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "Meshia.MeshSimplification",
+      "_appTitle": "Meshia.MeshSimplification",
+      "_appLogoPath": "images/logo.svg",
+      "_appFaviconPath": "images/logo.svg",
+      "_enableSearch": true
+    }
+  }
+}

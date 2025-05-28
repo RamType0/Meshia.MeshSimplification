@@ -23,8 +23,8 @@ namespace Meshia.MeshSimplification
         }
         public void Initialize(ReadOnlySpan<float3> points)
         {
-            Nodes.Clear(); 
-            
+            Nodes.Clear();
+
             if (Nodes.Capacity < points.Length)
             {
                 Nodes.Capacity = points.Length;
@@ -41,10 +41,10 @@ namespace Meshia.MeshSimplification
             InitializeNode(points, rootNodeIndex, indices, 0);
             indices.Dispose();
         }
-        unsafe static void Split<T>(UnsafeList<T> list, int mid, out UnsafeList<T> first, out UnsafeList<T> second) 
+        unsafe static void Split<T>(UnsafeList<T> list, int mid, out UnsafeList<T> first, out UnsafeList<T> second)
             where T : unmanaged
         {
-            if(mid == 0)
+            if (mid == 0)
             {
                 first = new(null, 0);
                 second = new(null, 0);
@@ -61,7 +61,7 @@ namespace Meshia.MeshSimplification
         int AllocateNode() => Nodes.Length++;
         void InitializeNode(ReadOnlySpan<float3> points, int nodeIndex, UnsafeList<int> indices, int nodeDepth)
         {
-            if(nodeIndex == -1)
+            if (nodeIndex == -1)
             {
                 return;
             }
@@ -79,7 +79,7 @@ namespace Meshia.MeshSimplification
                     });
                 }
             }
-            
+
 
             Split(indices, mid, out var first, out var second);
 
@@ -115,15 +115,15 @@ namespace Meshia.MeshSimplification
             var squaredDistance = math.distancesq(center, nodePoint);
 
             if (squaredDistance < radius * radius)
-            { 
+            {
                 results.Add(node.PointIndex);
             }
 
             var component = node.Component;
             var componentDifference = center[component] - nodePoint[component];
-            var searchDirection = math.select(new int2(0,1), new int2(1, 0), componentDifference > 0);
+            var searchDirection = math.select(new int2(0, 1), new int2(1, 0), componentDifference > 0);
             QueryPointsInSphere(points, node.ChildNodeIndices[searchDirection.x], center, radius, ref results);
-            if(math.abs(componentDifference) < radius)
+            if (math.abs(componentDifference) < radius)
             {
                 QueryPointsInSphere(points, node.ChildNodeIndices[searchDirection.y], center, radius, ref results);
             }
@@ -149,6 +149,6 @@ namespace Meshia.MeshSimplification
         }
     }
 
-    
+
 
 }

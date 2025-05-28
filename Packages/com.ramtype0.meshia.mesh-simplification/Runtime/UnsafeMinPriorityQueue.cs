@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
@@ -15,22 +16,39 @@ namespace Meshia.MeshSimplification
     /// <remarks>
     ///  https://github.com/dotnet/runtime/blob/5535e31a712343a63f5d7d796cd874e563e5ac14/src/libraries/System.Collections/src/System/Collections/Generic/PriorityQueue.cs
     /// </remarks>
-    struct UnsafeMinPriorityQueue<T> : INativeDisposable
+    unsafe struct UnsafeMinPriorityQueue<T> : INativeDisposable
         where T : unmanaged, IComparable<T>
     {
         internal UnsafeList<T> nodes;
         const int Arity = 4;
         const int Log2Arity = 2;
-        public UnsafeMinPriorityQueue(int initialCapacity, AllocatorManager.AllocatorHandle allocator)
+        public readonly int Count => nodes.Length;
+        public UnsafeMinPriorityQueue(int initialCapacity, AllocatorManager.AllocatorHandle allocator, NativeArrayOptions options = NativeArrayOptions.UninitializedMemory)
         {
-            nodes = new(initialCapacity, allocator);
+            nodes = new(initialCapacity, allocator, options);
         }
+        public static UnsafeMinPriorityQueue<T>* Create(int initialCapacity, AllocatorManager.AllocatorHandle allocator, NativeArrayOptions options = NativeArrayOptions.UninitializedMemory)
+        {
+            var queue = AllocatorManager.Allocate<UnsafeMinPriorityQueue<T>>(allocator);
+            *queue = new(initialCapacity, allocator, options);
+            return queue;
+        }
+        public static void Destroy(UnsafeMinPriorityQueue<T>* queue)
+        {
+            CheckNull(queue);
+            var allocator = queue->nodes.Allocator;
+            queue->Dispose();
+            AllocatorManager.Free(allocator, queue);
+        }
+
+
+
         /// <summary>
         /// Convert existing <see cref="NativeList{T}"/> to <see cref="UnsafeMinPriorityQueue{T}"/>. modifying <paramref name="list"/> after call this method will be resulted in unexpected behaviour.
         /// </summary>
         /// <param name="list"></param>
         /// <returns></returns>
-        public unsafe static UnsafeMinPriorityQueue<T>* ConvertFromExistingList(UnsafeList<T>* list)
+        public static UnsafeMinPriorityQueue<T>* ConvertFromExistingList(UnsafeList<T>* list)
         {
             var queue = (UnsafeMinPriorityQueue<T>*)list;
             queue->Heapify();
@@ -112,6 +130,38 @@ namespace Meshia.MeshSimplification
             element = default;
             return false;
         }
+
+        public void EnqueueRange(ReadOnlySpan<T> elements)
+        {
+            int newCount = Count + elements.Length;
+            if (nodes.Capacity < newCount)
+            {
+                nodes.SetCapacity(newCount);
+            }
+
+            if (nodes.IsEmpty)
+            {
+                fixed (T* ptr = elements)
+                {
+                    nodes.AddRangeNoResize(ptr, elements.Length);
+                }
+                if (Count > 1)
+                {
+                    Heapify();
+                }
+            }
+            else
+            {
+                foreach (var element in elements)
+                {
+                    Enqueue(element);
+                }
+            }
+
+
+        }
+
+        public void Clear() => nodes.Clear();
         /// <summary>
         /// Removes the node from the root of the heap
         /// </summary>
@@ -159,7 +209,7 @@ namespace Meshia.MeshSimplification
         /// </summary>
         void MoveUp(T node, int nodeIndex)
         {
-            while(nodeIndex > 0)
+            while (nodeIndex > 0)
             {
                 var parentIndex = GetParentIndex(nodeIndex);
                 var parent = nodes[parentIndex];
@@ -181,16 +231,16 @@ namespace Meshia.MeshSimplification
         void MoveDown(T node, int nodeIndex)
         {
             int i;
-            while((i = GetFirstChildIndex(nodeIndex)) < nodes.Length)
+            while ((i = GetFirstChildIndex(nodeIndex)) < nodes.Length)
             {
                 // Find the child node with the minimal priority
                 var minChild = nodes[i];
                 var minChildIndex = i;
                 var childIndexUpperBound = math.min(i + Arity, nodes.Length);
-                while(++i < childIndexUpperBound)
+                while (++i < childIndexUpperBound)
                 {
                     var nextChild = nodes[i];
-                    if(nextChild.CompareTo(minChild) < 0)
+                    if (nextChild.CompareTo(minChild) < 0)
                     {
                         minChild = nextChild;
                         minChildIndex = i;
@@ -212,8 +262,16 @@ namespace Meshia.MeshSimplification
         public JobHandle Dispose(JobHandle inputDeps) => nodes.Dispose(inputDeps);
 
         public void Dispose() => nodes.Dispose();
-    }
 
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS"), Conditional("UNITY_DOTS_DEBUG")]
+        internal static void CheckNull(void* queue)
+        {
+            if (queue == null)
+            {
+                throw new InvalidOperationException("UnsafeMinPriorityQueue has yet to be created or has been destroyed!");
+            }
+        }
+    }
 }
 
 

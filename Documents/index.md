@@ -1,10 +1,11 @@
-# Meshia Mesh Simplification
+---
+_layout: landing
+---
 
+# Meshia Mesh Simplification
 
 - [English](#english)
 - [日本語](#日本語)
-
-[Documents](https://ramtype0.github.io/Meshia.MeshSimplification/)
 
 ## English
 Mesh simplification tool/library for Unity, VRChat.

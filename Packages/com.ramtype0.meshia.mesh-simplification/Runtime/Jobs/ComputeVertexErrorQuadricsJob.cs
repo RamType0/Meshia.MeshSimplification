@@ -47,7 +47,7 @@ namespace Meshia.MeshSimplification
                     throw new Exception();
                 }
 
-                
+
                 if (!Edges.Contains(belongingEdges.c0.yx) || !Edges.Contains(belongingEdges.c1.yx))
                 {
                     vertexErrorQuadric += new ErrorQuadric(new Plane(math.right(), vertexPosition));

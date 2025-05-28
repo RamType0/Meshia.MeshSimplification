@@ -1,5 +1,4 @@
-﻿using NUnit.Framework;
-using System;
+﻿using System;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -12,7 +11,7 @@ namespace Meshia.MeshSimplification
         {
             if (Hint.Likely((uint)i < (uint)array.Length))
             {
-                
+
                 return ref ((T*)array.GetUnsafePtr())[i];
             }
             else

@@ -1,0 +1,75 @@
+name: Run Tests
+
+on:
+ workflow_dispatch:
+ push:
+ pull_request:
+
+env:
+ WORKING_DIRECTORY: .
+ UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+ UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+ UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+
+jobs:
+ test:
+   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+   runs-on: ubuntu-latest
+   strategy:
+     fail-fast: false
+     matrix:
+       unityVersion:
+         - 2022.3.22f1
+       testMode:
+         - playmode
+         - editmode
+         - standalone
+   steps:
+     - name: Checkout repository
+       uses: actions/checkout@v4
+
+     - name: Create LFS file list
+       run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+       working-directory: ${{ env.WORKING_DIRECTORY }}
+
+     - name: Restore LFS cache
+       uses: actions/cache@v3
+       with:
+         path: ${{ env.WORKING_DIRECTORY }}/.git/lfs
+         key: ${{ runner.os }}-lfs-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/.lfs-assets-id') }}
+
+     - name: Git LFS Pull
+       run: |
+         git lfs pull
+         git add .
+         git reset --hard
+       working-directory: ${{ env.WORKING_DIRECTORY }}
+
+     - uses: actions/cache@v3
+       with:
+         path: ${{ env.WORKING_DIRECTORY }}/Library
+         key: Library-${{ hashFiles('${{ env.WORKING_DIRECTORY }}/Assets/**', '${{ env.WORKING_DIRECTORY }}/Packages/**', '${{ env.WORKING_DIRECTORY }}/ProjectSettings/**') }}
+         restore-keys: |
+           Library-
+
+     - uses: game-ci/unity-test-runner@v4
+       with:
+         unityVersion: ${{ matrix.unityVersion }}
+         testMode: ${{ matrix.testMode }}
+         artifactsPath: ${{ matrix.testMode }}-artifacts
+         githubToken: ${{ secrets.GITHUB_TOKEN }}
+         checkName: ${{ matrix.testMode }} Test Results
+         coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+my.assembly.*'
+         projectPath: ${{ env.WORKING_DIRECTORY }}
+
+     - uses: actions/upload-artifact@v4
+       if: always()
+       with:
+         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+         path: ${{ env.WORKING_DIRECTORY }}/${{ steps.tests.outputs.artifactsPath }}
+
+     - uses: actions/upload-artifact@v4
+       if: always()
+       with:
+         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+         path: ${{ env.WORKING_DIRECTORY }}/${{ steps.tests.outputs.coveragePath }}

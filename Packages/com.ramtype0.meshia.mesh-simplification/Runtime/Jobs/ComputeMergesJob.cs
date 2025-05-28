@@ -20,7 +20,7 @@ namespace Meshia.MeshSimplification
         [ReadOnly]
         public NativeArray<int2> Edges;
         [WriteOnly]
-        public NativeArray<VertexMerge> VertexMerges;
+        public NativeArray<VertexMerge> UnorderedDirtyVertexMerges;
 
         public MeshSimplifierOptions Options;
         public void Execute(int index)
@@ -62,7 +62,7 @@ namespace Meshia.MeshSimplification
                     Cost = float.PositiveInfinity,
                 };
             }
-            VertexMerges[index] = merge;
+            UnorderedDirtyVertexMerges[index] = merge;
 
         }
     }

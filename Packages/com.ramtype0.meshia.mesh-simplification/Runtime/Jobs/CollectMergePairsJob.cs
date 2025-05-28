@@ -1,6 +1,5 @@
 ﻿using Unity.Burst;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 namespace Meshia.MeshSimplification
@@ -21,7 +20,7 @@ namespace Meshia.MeshSimplification
 
 
             MergePairs.Clear();
-            if (MergePairs.Capacity < maxPairCount) 
+            if (MergePairs.Capacity < maxPairCount)
             {
                 MergePairs.Capacity = maxPairCount;
             }
@@ -44,11 +43,11 @@ namespace Meshia.MeshSimplification
                 }
                 else
                 {
-                    if(!Edges.Contains(pair.yx))
+                    if (!Edges.Contains(pair.yx))
                     {
                         MergePairs.AddNoResize(pair.yx);
                     }
-                        
+
 
                 }
             }

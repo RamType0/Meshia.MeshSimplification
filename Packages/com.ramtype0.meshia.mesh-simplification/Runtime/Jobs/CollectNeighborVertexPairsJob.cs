@@ -1,5 +1,4 @@
-﻿using Meshia.MeshSimplification;
-using Unity.Burst;
+﻿using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
@@ -43,7 +42,7 @@ namespace Meshia.MeshSimplification
 
                 foreach (var linkOpponentVertexIndex in linkOpponentVertices)
                 {
-                    if(subMeshVertexIndex < linkOpponentVertexIndex && !VertexIsDiscardedBits.IsSet(subMeshDescriptor.firstVertex + linkOpponentVertexIndex))
+                    if (subMeshVertexIndex < linkOpponentVertexIndex && !VertexIsDiscardedBits.IsSet(subMeshDescriptor.firstVertex + linkOpponentVertexIndex))
                     {
                         var pair = new int2(subMeshVertexIndex, linkOpponentVertexIndex) + subMeshDescriptor.firstVertex;
                         subMeshSmartLinkList.Add(pair);
