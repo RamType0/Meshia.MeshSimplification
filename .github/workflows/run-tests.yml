@@ -8,7 +8,9 @@ on:
 env:
  WORKING_DIRECTORY: .
  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-
+ UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+ UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+ 
 jobs:
  test:
    name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
