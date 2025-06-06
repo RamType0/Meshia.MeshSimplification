@@ -22,7 +22,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public Renderer Renderer;
         public int TargetTriangleCount;
         public MeshSimplifierOptions Options;
-        public MeshiaCascadingMeshSimplifierTargetState State;
+        public MeshiaCascadingMeshSimplifierTargetKind State;
         public bool Fixed;
 
         public MeshiaCascadingMeshSimplifierTarget(Renderer renderer)
@@ -30,7 +30,7 @@ namespace Meshia.MeshSimplification.Ndmf
             Renderer = renderer;
             TargetTriangleCount = MeshDataHelpers.GetTriangleCount(RendererUtility.GetMesh(renderer)!);
             Options = MeshSimplifierOptions.Default;
-            State = MeshiaCascadingMeshSimplifierTargetState.Enabled;
+            State = MeshiaCascadingMeshSimplifierTargetKind.Enabled;
             Fixed = false;
         }
 
@@ -45,10 +45,10 @@ namespace Meshia.MeshSimplification.Ndmf
         }
 
         public bool IsValid() => IsValidTarget(Renderer);
-        public bool Enabled() => State == MeshiaCascadingMeshSimplifierTargetState.Enabled;
+        public bool Enabled() => State == MeshiaCascadingMeshSimplifierTargetKind.Enabled;
     }
 
-    public enum MeshiaCascadingMeshSimplifierTargetState
+    public enum MeshiaCascadingMeshSimplifierTargetKind
     {
         Enabled,
         Disabled,

@@ -42,7 +42,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 if (!MeshiaCascadingMeshSimplifierTarget.IsValidTarget(newRenderer)) continue;
 
                 var target = new MeshiaCascadingMeshSimplifierTarget(newRenderer);
-                if (IsEditorOnlyInHierarchy(newRenderer.gameObject)) target.State = MeshiaCascadingMeshSimplifierTargetState.EditorOnly;
+                if (IsEditorOnlyInHierarchy(newRenderer.gameObject)) target.State = MeshiaCascadingMeshSimplifierTargetKind.EditorOnly;
                 _component.Targets.Add(target);
             }
         }
@@ -199,7 +199,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     var renderer = otherTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.Renderer));
                     var totalTriangleCount = GetTotalTriangleCount(otherTarget);
 
-                    var IsEditorOnly = state.intValue == (int)MeshiaCascadingMeshSimplifierTargetState.EditorOnly;
+                    var IsEditorOnly = state.intValue == (int)MeshiaCascadingMeshSimplifierTargetKind.EditorOnly;
                     var suspicious = IsEditorOnly && !IsEditorOnlyInHierarchy((renderer.objectReferenceValue as Renderer).gameObject);
                     
                     var defaultBackgroundColor = GUI.backgroundColor;
@@ -275,13 +275,13 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                 switch (state.intValue)
                 {
-                    case (int)MeshiaCascadingMeshSimplifierTargetState.Enabled:
+                    case (int)MeshiaCascadingMeshSimplifierTargetKind.Enabled:
                         enabledTargets.Add(simplifierTarget);
                         break;
-                    case (int)MeshiaCascadingMeshSimplifierTargetState.Disabled:
+                    case (int)MeshiaCascadingMeshSimplifierTargetKind.Disabled:
                         disabledTargets.Add(simplifierTarget);
                         break;
-                    case (int)MeshiaCascadingMeshSimplifierTargetState.EditorOnly:
+                    case (int)MeshiaCascadingMeshSimplifierTargetKind.EditorOnly:
                         editorOnlyTargets.Add(simplifierTarget);
                         break;
                 }
@@ -383,7 +383,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var targetTriangleCount = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingMeshSimplifierTarget.TargetTriangleCount));
                 var totalTriangleCount = GetTotalTriangleCount(simplifierTarget);
 
-                if (state.intValue == (int)MeshiaCascadingMeshSimplifierTargetState.Enabled && !fixedValue.boolValue)
+                if (state.intValue == (int)MeshiaCascadingMeshSimplifierTargetKind.Enabled && !fixedValue.boolValue)
                 {
                     targetTriangleCount.intValue = (int)(totalTriangleCount * ratio);
                 }
