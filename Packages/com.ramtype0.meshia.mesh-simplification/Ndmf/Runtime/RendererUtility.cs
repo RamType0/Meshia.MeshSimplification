@@ -7,7 +7,7 @@ namespace Meshia.MeshSimplification.Ndmf
 {
     public class RendererUtility
     {
-        public static Mesh? GetMesh(Renderer renderer)
+        public static Mesh GetMesh(Renderer renderer)
         {
             switch (renderer)
             {
