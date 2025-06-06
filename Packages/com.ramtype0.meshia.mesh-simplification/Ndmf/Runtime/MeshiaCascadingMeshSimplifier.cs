@@ -28,7 +28,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public MeshiaCascadingMeshSimplifierTarget(Renderer renderer)
         {
             Renderer = renderer;
-            TargetTriangleCount = MeshDataHelpers.GetTriangleCount(RendererUtility.GetMesh(renderer)!);
+            TargetTriangleCount = RendererUtility.GetMesh(renderer)!.GetTriangleCount();
             Options = MeshSimplifierOptions.Default;
             State = MeshiaCascadingMeshSimplifierTargetKind.Enabled;
             Fixed = false;
@@ -40,7 +40,7 @@ namespace Meshia.MeshSimplification.Ndmf
             if (renderer is not SkinnedMeshRenderer and not MeshRenderer) return false;
             var mesh = RendererUtility.GetMesh(renderer);
             if (mesh == null) return false;
-            if (MeshDataHelpers.GetTriangleCount(mesh) == 0) return false;
+            if (mesh.GetTriangleCount() == 0) return false;
             return true;
         }
 
