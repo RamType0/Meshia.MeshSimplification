@@ -11,15 +11,20 @@ namespace Meshia.MeshSimplification.Ndmf
         {
             switch (renderer)
             {
-                case MeshRenderer meshrenderer:
-                    var meshfilter = meshrenderer.GetComponent<MeshFilter>();
-                    return meshfilter == null ? null : meshfilter.sharedMesh;
+                case MeshRenderer meshRenderer:
+                    var meshFilter = meshRenderer.GetComponent<MeshFilter>();
+                    if (meshFilter == null) throw new Exception("MeshFilter is null");
+                    var mesh = meshFilter.sharedMesh;
+                    if (mesh == null) throw new Exception("Mesh is null");
+                    return mesh;
                 case SkinnedMeshRenderer skinnedMeshRenderer:
-                    return skinnedMeshRenderer.sharedMesh;
+                    var mesh2 = skinnedMeshRenderer.sharedMesh;
+                    if (mesh2 == null) throw new Exception("Mesh is null");
+                    return mesh2;
                 default:
                     throw new ArgumentException("Could not find target property to get mesh.");
             }
-        } 
+        }
         
         public static void SetMesh(Renderer renderer, Mesh mesh)
         {
@@ -27,7 +32,7 @@ namespace Meshia.MeshSimplification.Ndmf
             {
                 case MeshRenderer meshrenderer:
                     var meshfilter = meshrenderer.GetComponent<MeshFilter>();
-                    if (meshfilter == null) return;
+                    if (meshfilter == null) throw new Exception("MeshFilter is null");
                     meshfilter.sharedMesh = mesh;
                     break;
                 case SkinnedMeshRenderer skinnedMeshRenderer:
