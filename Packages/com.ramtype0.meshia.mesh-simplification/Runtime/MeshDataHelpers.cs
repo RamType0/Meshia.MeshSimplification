@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using Unity.Burst.CompilerServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
