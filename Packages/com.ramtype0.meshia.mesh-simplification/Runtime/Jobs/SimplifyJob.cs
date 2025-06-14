@@ -10,7 +10,7 @@ using Unity.Profiling;
 using UnityEngine;
 namespace Meshia.MeshSimplification
 {
-    [BurstCompile(DisableSafetyChecks = true, FloatMode = FloatMode.Fast, OptimizeFor = OptimizeFor.Performance)]
+    [BurstCompile(DisableSafetyChecks = true, OptimizeFor = OptimizeFor.Performance)]
     struct SimplifyJob : IJob
     {
         [BurstCompile]
