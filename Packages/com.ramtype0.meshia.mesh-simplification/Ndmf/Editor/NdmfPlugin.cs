@@ -46,7 +46,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                             {
                                 if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
-                                var mesh = RendererUtility.GetMesh(cascadingTarget.Renderer)!;
+                                var mesh = RendererUtility.GetMesh(cascadingTarget.Renderer);
                                 var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
                                 parameters.Add((mesh, target, cascadingTarget.Options, mesh));
                             }
