@@ -7,22 +7,32 @@ namespace Meshia.MeshSimplification.Ndmf
 {
     public class RendererUtility
     {
-        public static Mesh GetMesh(Renderer renderer)
+        public static Mesh GetRequiredMesh(Renderer renderer) => GetMesh(renderer) ?? throw new ArgumentException("The associated renderer does not have mesh.");
+        public static Mesh? GetMesh(Renderer renderer)
         {
             switch (renderer)
             {
                 case MeshRenderer meshRenderer:
-                    var meshFilter = meshRenderer.GetComponent<MeshFilter>();
-                    if (meshFilter == null) throw new Exception("MeshFilter is null");
-                    var mesh = meshFilter.sharedMesh;
-                    if (mesh == null) throw new Exception("Mesh is null");
-                    return mesh;
+                    {
+                        if (meshRenderer.TryGetComponent<MeshFilter>(out var meshFilter))
+                        {
+                            var mesh = meshFilter.sharedMesh;
+                            if (mesh == null) return null;
+                            return mesh;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
                 case SkinnedMeshRenderer skinnedMeshRenderer:
-                    var mesh2 = skinnedMeshRenderer.sharedMesh;
-                    if (mesh2 == null) throw new Exception("Mesh is null");
-                    return mesh2;
+                    {
+                        var mesh = skinnedMeshRenderer.sharedMesh;
+                        if (mesh == null) return null;
+                        return mesh;
+                    }
                 default:
-                    throw new ArgumentException("Could not find target property to get mesh.");
+                    throw new ArgumentException($"Unsupported type of renderer: {renderer.GetType()}");
             }
         }
         
@@ -32,14 +42,14 @@ namespace Meshia.MeshSimplification.Ndmf
             {
                 case MeshRenderer meshrenderer:
                     var meshfilter = meshrenderer.GetComponent<MeshFilter>();
-                    if (meshfilter == null) throw new Exception("MeshFilter is null");
+                    if (meshfilter == null) throw new ArgumentException($"The associated renderer was {nameof(MeshRenderer)}, but it has no {nameof(MeshFilter)}.");
                     meshfilter.sharedMesh = mesh;
                     break;
                 case SkinnedMeshRenderer skinnedMeshRenderer:
                     skinnedMeshRenderer.sharedMesh = mesh;
                     break;
                 default:
-                    throw new ArgumentException("Could not find target property to set mesh.");
+                    throw new ArgumentException($"Unsupported type of renderer: {renderer.GetType()}");
             }
         }
     }
