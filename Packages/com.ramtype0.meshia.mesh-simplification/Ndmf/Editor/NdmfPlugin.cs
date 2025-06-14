@@ -1,8 +1,10 @@
+#nullable enable
 #if ENABLE_NDMF
 
 using Meshia.MeshSimplification.Ndmf.Editor;
 using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using nadena.dev.ndmf;
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -46,7 +48,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                             {
                                 if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
-                                var mesh = RendererUtility.GetMesh(cascadingTarget.Renderer);
+                                var mesh = RendererUtility.GetRequiredMesh(cascadingTarget.Renderer);
                                 var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
                                 parameters.Add((mesh, target, cascadingTarget.Options, mesh));
                             }

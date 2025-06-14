@@ -44,7 +44,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
         {
             var original = proxyPairs.First().Item1;
             var proxy = proxyPairs.First().Item2;
-            var proxyMesh = RendererUtility.GetMesh(proxy);
+            var proxyMesh = RendererUtility.GetRequiredMesh(proxy);
 
             var (target, options) = QueryTarget(context, group, original, proxy);
 
