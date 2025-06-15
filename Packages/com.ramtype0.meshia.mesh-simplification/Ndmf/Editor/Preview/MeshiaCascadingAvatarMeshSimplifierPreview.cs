@@ -8,13 +8,13 @@ using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 {
-    internal class MeshiaCascadingMeshSimplifierPreview : MeshiaMeshSimplifierPreviewBase<MeshiaCascadingMeshSimplifierPreview>
+    internal class MeshiaCascadingAvatarMeshSimplifierPreview : MeshiaMeshSimplifierPreviewBase<MeshiaCascadingAvatarMeshSimplifierPreview>
     {
-        static MeshiaCascadingMeshSimplifierPreview()
+        static MeshiaCascadingAvatarMeshSimplifierPreview()
         {
             ToggleNode = TogglablePreviewNode.Create(
-                () => "MeshiaCascadingMeshSimplifier",
-                qualifiedName: "Meshia.MeshSimplification.MeshiaCascadingMeshSimplifier"
+                () => "MeshiaCascadingAvatarMeshSimplifier",
+                qualifiedName: "Meshia.MeshSimplification.MeshiaCascadingAvatarMeshSimplifier"
             );
         }
 
@@ -24,7 +24,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             foreach (var root in context.GetAvatarRoots())
             {
                 if (context.ActiveInHierarchy(root) is false) continue;
-                foreach (var component in context.GetComponentsInChildren<MeshiaCascadingMeshSimplifier>(root, true))
+                foreach (var component in context.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(root, true))
                 {
                     var componentEnabled = context.Observe(component.gameObject, g => g.activeInHierarchy);
                     if (!componentEnabled) continue;
@@ -37,7 +37,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
                         if (!targetEnabled) continue;
 
                         var renderer = component.Targets[index].GetTargetRenderer(component)!;
-                        groups.Add(RenderGroup.For(renderer).WithData<(MeshiaCascadingMeshSimplifier, int)>((component, index)));
+                        groups.Add(RenderGroup.For(renderer).WithData<(MeshiaCascadingAvatarMeshSimplifier, int)>((component, index)));
                     }
                 }
             }
@@ -46,7 +46,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
         
         protected override (MeshSimplificationTarget, MeshSimplifierOptions) QueryTarget(ComputeContext context, RenderGroup group, Renderer original, Renderer proxy)
         {
-            var data = group.GetData<(MeshiaCascadingMeshSimplifier, int)>();
+            var data = group.GetData<(MeshiaCascadingAvatarMeshSimplifier, int)>();
             var component = data.Item1;
             var index = data.Item2;
 

@@ -11,12 +11,12 @@ using nadena.dev.modular_avatar.core;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
-    public class MeshiaCascadingMeshSimplifier : MonoBehaviour
+    public class MeshiaCascadingAvatarMeshSimplifier : MonoBehaviour
 #if ENABLE_VRCHAT_BASE
     , VRC.SDKBase.IEditorOnly
 #endif
     {
-        public List<MeshiaCascadingMeshSimplifierTarget> Targets = new();
+        public List<MeshiaCascadingAvatarMeshSimplifierTarget> Targets = new();
         public int TargetTriangleCount = 70000;
         public bool IsAutoAdjust = false;
 
@@ -28,14 +28,14 @@ namespace Meshia.MeshSimplification.Ndmf
             foreach (var target in collectedRenderers)
             {
                 if (existingTargets.Contains(target)) continue;
-                if (!MeshiaCascadingMeshSimplifierTarget.IsValidTarget(target)) continue;
-                Targets.Add(new MeshiaCascadingMeshSimplifierTarget(target));
+                if (!MeshiaCascadingAvatarMeshSimplifierTarget.IsValidTarget(target)) continue;
+                Targets.Add(new MeshiaCascadingAvatarMeshSimplifierTarget(target));
             }
         }
 
-        internal Dictionary<int, MeshiaCascadingMeshSimplifierTarget> GetValidTargets()
+        internal Dictionary<int, MeshiaCascadingAvatarMeshSimplifierTarget> GetValidTargets()
         {
-            var validTargets = new Dictionary<int, MeshiaCascadingMeshSimplifierTarget>();
+            var validTargets = new Dictionary<int, MeshiaCascadingAvatarMeshSimplifierTarget>();
             for (int i = 0; i < Targets.Count; i++)
             {
                 var target = Targets[i];
@@ -68,9 +68,9 @@ namespace Meshia.MeshSimplification.Ndmf
             return collectedRenderers;
         }
 
-        private void CollectOwnedRenderersRecursively(Transform currentTransform, MeshiaCascadingMeshSimplifier? currentOwner, List<Renderer> collectedRenderers)
+        private void CollectOwnedRenderersRecursively(Transform currentTransform, MeshiaCascadingAvatarMeshSimplifier? currentOwner, List<Renderer> collectedRenderers)
         {
-            var effectiveOwner = currentTransform.TryGetComponent<MeshiaCascadingMeshSimplifier>(out var ownerOnSelf) ? ownerOnSelf : currentOwner;
+            var effectiveOwner = currentTransform.TryGetComponent<MeshiaCascadingAvatarMeshSimplifier>(out var ownerOnSelf) ? ownerOnSelf : currentOwner;
 
             if (effectiveOwner == this)
             {
@@ -88,7 +88,7 @@ namespace Meshia.MeshSimplification.Ndmf
     }
 
     [Serializable]
-    public record MeshiaCascadingMeshSimplifierTarget
+    public record MeshiaCascadingAvatarMeshSimplifierTarget
     {
         public AvatarObjectReference RendererObjectReference;
         public int TargetTriangleCount;
@@ -96,7 +96,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public bool Enabled;
         public bool Fixed;
 
-        public MeshiaCascadingMeshSimplifierTarget(Renderer renderer)
+        public MeshiaCascadingAvatarMeshSimplifierTarget(Renderer renderer)
         {
             RendererObjectReference = new AvatarObjectReference();
             RendererObjectReference.Set(renderer.gameObject);
@@ -125,7 +125,7 @@ namespace Meshia.MeshSimplification.Ndmf
             return renderer;
         }
 
-        internal bool IsValid(MeshiaCascadingMeshSimplifier container) => IsValidTarget(GetTargetRenderer(container));
+        internal bool IsValid(MeshiaCascadingAvatarMeshSimplifier container) => IsValidTarget(GetTargetRenderer(container));
 
         private static bool IsEditorOnlyInHierarchy(GameObject gameObject)
         {
