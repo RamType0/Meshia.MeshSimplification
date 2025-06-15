@@ -25,7 +25,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 .Run("Simplify meshes", ctx =>
                 {
                     var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
-                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingMeshSimplifier>(true);
+                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
                     using(ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
                         foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
@@ -90,7 +90,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             }
                         }
                     }
-                }).PreviewingWith(new MeshiaMeshSimplifierPreview(), new MeshiaCascadingMeshSimplifierPreview())
+                }).PreviewingWith(new MeshiaMeshSimplifierPreview(), new MeshiaCascadingAvatarMeshSimplifierPreview())
             ;
         }
     }
