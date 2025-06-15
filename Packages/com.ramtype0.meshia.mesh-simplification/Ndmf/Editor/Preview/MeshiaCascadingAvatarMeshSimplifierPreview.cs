@@ -29,14 +29,14 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
                     var componentEnabled = context.Observe(component.gameObject, g => g.activeInHierarchy);
                     if (!componentEnabled) continue;
 
-                    var targetCount = context.Observe(component, c => c.Targets.Count());
+                    var targetCount = context.Observe(component, c => c.Entries.Count());
                     for (int i = 0; i < targetCount; i++)
                     {
                         var index = i;
-                        var targetEnabled = context.Observe(component, c => c.Targets[index].IsValid(c) && c.Targets[index].Enabled);
+                        var targetEnabled = context.Observe(component, c => c.Entries[index].IsValid(c) && c.Entries[index].Enabled);
                         if (!targetEnabled) continue;
 
-                        var renderer = component.Targets[index].GetTargetRenderer(component)!;
+                        var renderer = component.Entries[index].GetTargetRenderer(component)!;
                         groups.Add(RenderGroup.For(renderer).WithData<(MeshiaCascadingAvatarMeshSimplifier, int)>((component, index)));
                     }
                 }
@@ -50,7 +50,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             var component = data.Item1;
             var index = data.Item2;
 
-            var cascadingTarget = context.Observe(component, c => c.Targets[index] with { }, (a, b) => a.Equals(b));
+            var cascadingTarget = context.Observe(component, c => c.Entries[index] with { }, (a, b) => a.Equals(b));
             var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
             return (target, cascadingTarget.Options);
         }
