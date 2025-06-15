@@ -18,7 +18,7 @@ namespace Meshia.MeshSimplification.Ndmf
     {
         public List<MeshiaCascadingAvatarMeshSimplifierTarget> Targets = new();
         public int TargetTriangleCount = 70000;
-        public bool IsAutoAdjust = false;
+        public bool AutoAdjustEnabled = false;
 
         internal void AddTargets()
         {
@@ -108,7 +108,7 @@ namespace Meshia.MeshSimplification.Ndmf
         {
             RendererObjectReference = new AvatarObjectReference();
             RendererObjectReference.Set(renderer.gameObject);
-            TargetTriangleCount = RendererUtility.GetRequiredMesh(renderer).GetTriangleCount();
+            TargetTriangleCount = RendererUtility.GetMesh(renderer)?.GetTriangleCount() ?? 0;
             Options = MeshSimplifierOptions.Default;
             Enabled = true;
             Fixed = false;
@@ -119,8 +119,8 @@ namespace Meshia.MeshSimplification.Ndmf
             if (renderer == null) return false;
             if (IsEditorOnlyInHierarchy(renderer.gameObject)) return false;
             if (renderer is not SkinnedMeshRenderer and not MeshRenderer) return false;
-            var mesh = RendererUtility.GetRequiredMesh(renderer);
-            if (mesh.GetTriangleCount() == 0) return false;
+            var mesh = RendererUtility.GetMesh(renderer);
+            if (mesh == null || mesh.GetTriangleCount() == 0) return false;
             return true;
         }
 
