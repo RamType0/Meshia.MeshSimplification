@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:HelpBox message-type="Warning" name="NdmfNotImportedWarning" text="This component has no effect without NDMF imported to the project." style="visibility: visible; display: none;" />
+    <ui:GroupBox style="flex-direction: row;">
+        <ui:IntegerField label="Target Triangle Count" value="70000" name="TargetTriangleCountField" binding-path="TargetTriangleCount" />
+        <ui:DropdownField name="TargetTriangleCountPresetDropdownField" />
+    </ui:GroupBox>
+    <ui:GroupBox style="flex-direction: row;">
+        <ui:Button text="Adjust" parse-escape-sequences="true" display-tooltip-when-elided="true" enable-rich-text="false" name="AdjustButton" />
+        <ui:Toggle label="Enable Auto Adjust" binding-path="AutoAdjustEnabled" name="AutoAdjustEnabledToggle" />
+    </ui:GroupBox>
+    <ui:IMGUIContainer />
+</ui:UXML>
