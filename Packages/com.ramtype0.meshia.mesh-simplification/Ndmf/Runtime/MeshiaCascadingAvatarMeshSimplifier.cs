@@ -85,6 +85,14 @@ namespace Meshia.MeshSimplification.Ndmf
                 CollectOwnedRenderersRecursively(child, effectiveOwner, collectedRenderers);
             }
         }
+
+        internal void ResolveReferences()
+        {
+            foreach (var target in Targets)
+            {
+                target.ResolveReference(this);
+            }
+        }
     }
 
     [Serializable]
@@ -140,6 +148,11 @@ namespace Meshia.MeshSimplification.Ndmf
                 current = current.parent;
             }
             return false;
+        }
+
+        internal void ResolveReference(Component container)
+        {
+            RendererObjectReference.Get(container);
         }
     }
 }

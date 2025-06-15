@@ -20,6 +20,16 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         protected override void Configure()
         {
+            InPhase(BuildPhase.Resolving)
+                .Run("Resolve References", ctx =>
+                {
+                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
+                    foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
+                    {
+                        cascadingMeshSimplifier.ResolveReferences();
+                    }
+                });
+            
             InPhase(BuildPhase.Optimizing)
                 .BeforePlugin("com.anatawa12.avatar-optimizer")
                 .Run("Simplify meshes", ctx =>
