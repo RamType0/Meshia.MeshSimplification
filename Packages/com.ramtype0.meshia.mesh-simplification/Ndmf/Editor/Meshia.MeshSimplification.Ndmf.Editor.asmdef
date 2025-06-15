@@ -5,7 +5,8 @@
         "Meshia.MeshSimplification.Runtime",
         "Meshia.MeshSimplification.Ndmf.Runtime",
         "nadena.dev.ndmf",
-        "nadena.dev.ndmf.runtime"
+        "nadena.dev.ndmf.runtime",
+        "Unity.Collections"
     ],
     "includePlatforms": [
         "Editor"
@@ -23,6 +24,11 @@
             "name": "nadena.dev.ndmf",
             "expression": "",
             "define": "ENABLE_NDMF"
+        },
+        {
+            "name": "nadena.dev.modular-avatar",
+            "expression": "",
+            "define": "ENABLE_MODULAR_AVATAR"
         }
     ],
     "noEngineReferences": false
