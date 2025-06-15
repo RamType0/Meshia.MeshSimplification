@@ -38,6 +38,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             return context.Observe(ToggleNode.IsEnabled);
         }
 
+        public static bool IsEnabled() => ToggleNode?.IsEnabled.Value ?? true;
+
         public abstract ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context);
 
         async Task<IRenderFilterNode> IRenderFilter.Instantiate(RenderGroup group, IEnumerable<(Renderer, Renderer)> proxyPairs, ComputeContext context)
@@ -60,7 +62,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             }
 
             TriangleCountCache[original] = (proxyMesh.GetTriangleCount(), simplifiedMesh.GetTriangleCount());
-
+         
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
         }
 

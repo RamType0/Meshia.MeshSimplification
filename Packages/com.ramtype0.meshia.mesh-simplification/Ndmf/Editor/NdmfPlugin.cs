@@ -47,8 +47,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         {
                             foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                             {
-                                if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
-                                var mesh = RendererUtility.GetRequiredMesh(cascadingTarget.Renderer);
+                                if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
+                                var mesh = RendererUtility.GetRequiredMesh(cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!);
                                 var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
                                 parameters.Add((mesh, target, cascadingTarget.Options, mesh));
                             }
@@ -79,8 +79,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             {
                                 foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
                                 {
-                                    if (!cascadingTarget.IsValid() || !cascadingTarget.Enabled()) continue;
-                                    var renderer = cascadingTarget.Renderer!;
+                                    if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
+                                    var renderer = cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!;
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);

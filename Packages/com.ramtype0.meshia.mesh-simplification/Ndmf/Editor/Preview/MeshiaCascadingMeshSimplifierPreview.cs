@@ -33,10 +33,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
                     for (int i = 0; i < targetCount; i++)
                     {
                         var index = i;
-                        var targetEnabled = context.Observe(component, c => c.Targets[index].IsValid() && c.Targets[index].Enabled());
+                        var targetEnabled = context.Observe(component, c => c.Targets[index].IsValid(c) && c.Targets[index].Enabled);
                         if (!targetEnabled) continue;
 
-                        var renderer = component.Targets[index].Renderer;
+                        var renderer = component.Targets[index].GetTargetRenderer(component)!;
                         groups.Add(RenderGroup.For(renderer).WithData<(MeshiaCascadingMeshSimplifier, int)>((component, index)));
                     }
                 }

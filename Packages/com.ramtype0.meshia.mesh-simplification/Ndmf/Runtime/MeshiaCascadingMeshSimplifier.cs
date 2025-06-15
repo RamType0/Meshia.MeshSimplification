@@ -1,8 +1,13 @@
 #nullable enable
 
+#if ENABLE_MODULAR_AVATAR
+
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using nadena.dev.ndmf.runtime;
+using nadena.dev.modular_avatar.core;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
@@ -14,43 +19,129 @@ namespace Meshia.MeshSimplification.Ndmf
         public List<MeshiaCascadingMeshSimplifierTarget> Targets = new();
         public int TargetTriangleCount = 70000;
         public bool IsAutoAdjust = false;
+
+        internal void AddTargets()
+        {
+            var collectedRenderers = CollectOwnedRenderers();
+
+            var existingTargets = Targets.Select(t => t.GetTargetRenderer(this)).Where(r => r != null).ToHashSet();
+            foreach (var target in collectedRenderers)
+            {
+                if (existingTargets.Contains(target)) continue;
+                if (!MeshiaCascadingMeshSimplifierTarget.IsValidTarget(target)) continue;
+                Targets.Add(new MeshiaCascadingMeshSimplifierTarget(target));
+            }
+        }
+
+        internal Dictionary<int, MeshiaCascadingMeshSimplifierTarget> GetValidTargets()
+        {
+            var validTargets = new Dictionary<int, MeshiaCascadingMeshSimplifierTarget>();
+            for (int i = 0; i < Targets.Count; i++)
+            {
+                var target = Targets[i];
+                if (target.IsValid(this))
+                {
+                    var renderer = target.GetTargetRenderer(this);
+                    if (renderer == null) continue;
+                    validTargets.Add(i, target);
+                }
+            }
+            return validTargets;
+        }
+
+        internal void RemoveInvalidTargets()
+        {
+            Targets.RemoveAll(t => !t.IsValid(this));
+        }
+
+        internal List<Renderer> CollectOwnedRenderers()
+        {
+            var avatarRoot = RuntimeUtil.FindAvatarInParents(transform);
+            if (avatarRoot == null) return new List<Renderer>();
+
+            var collectedRenderers = new List<Renderer>();
+            
+            // このコンポーネントがある階層の親から開始し、初期所有者をthisに設定
+            var startTransform = transform.parent ?? avatarRoot;
+            CollectOwnedRenderersRecursively(startTransform, this, collectedRenderers);
+            
+            return collectedRenderers;
+        }
+
+        private void CollectOwnedRenderersRecursively(Transform currentTransform, MeshiaCascadingMeshSimplifier? currentOwner, List<Renderer> collectedRenderers)
+        {
+            var effectiveOwner = currentTransform.TryGetComponent<MeshiaCascadingMeshSimplifier>(out var ownerOnSelf) ? ownerOnSelf : currentOwner;
+
+            if (effectiveOwner == this)
+            {
+                if (currentTransform.TryGetComponent<Renderer>(out var renderer))
+                {
+                    collectedRenderers.Add(renderer);
+                }
+            }
+
+            foreach (Transform child in currentTransform)
+            {
+                CollectOwnedRenderersRecursively(child, effectiveOwner, collectedRenderers);
+            }
+        }
     }
 
     [Serializable]
     public record MeshiaCascadingMeshSimplifierTarget
     {
-        public Renderer Renderer;
+        public AvatarObjectReference RendererObjectReference;
         public int TargetTriangleCount;
         public MeshSimplifierOptions Options;
-        public MeshiaCascadingMeshSimplifierTargetKind State;
+        public bool Enabled;
         public bool Fixed;
 
         public MeshiaCascadingMeshSimplifierTarget(Renderer renderer)
         {
-            Renderer = renderer;
-            TargetTriangleCount = RendererUtility.GetMesh(renderer)?.GetTriangleCount() ?? 0;
+            RendererObjectReference = new AvatarObjectReference();
+            RendererObjectReference.Set(renderer.gameObject);
+            TargetTriangleCount = RendererUtility.GetRequiredMesh(renderer).GetTriangleCount();
             Options = MeshSimplifierOptions.Default;
-            State = MeshiaCascadingMeshSimplifierTargetKind.Enabled;
+            Enabled = true;
             Fixed = false;
         }
 
-        public static bool IsValidTarget(Renderer renderer)
+        internal static bool IsValidTarget(Renderer? renderer)
         {
             if (renderer == null) return false;
+            if (IsEditorOnlyInHierarchy(renderer.gameObject)) return false;
             if (renderer is not SkinnedMeshRenderer and not MeshRenderer) return false;
-            var mesh = RendererUtility.GetMesh(renderer);
-            if (mesh == null || mesh.GetTriangleCount() == 0) return false;
+            var mesh = RendererUtility.GetRequiredMesh(renderer);
+            if (mesh.GetTriangleCount() == 0) return false;
             return true;
         }
 
-        public bool IsValid() => IsValidTarget(Renderer);
-        public bool Enabled() => State == MeshiaCascadingMeshSimplifierTargetKind.Enabled;
-    }
+        internal Renderer? GetTargetRenderer(Component container)
+        {
+            var obj = RendererObjectReference.Get(container);
+            if (obj == null) return null;
+            var renderer = obj.GetComponent<Renderer>();
+            if (renderer == null) return null;
+            return renderer;
+        }
 
-    public enum MeshiaCascadingMeshSimplifierTargetKind
-    {
-        Enabled,
-        Disabled,
-        EditorOnly
+        internal bool IsValid(MeshiaCascadingMeshSimplifier container) => IsValidTarget(GetTargetRenderer(container));
+
+        private static bool IsEditorOnlyInHierarchy(GameObject gameObject)
+        {
+            if (gameObject == null) return false;
+            Transform current = gameObject.transform;
+            while (current != null)
+            {
+                if (current.tag == "EditorOnly")
+                {
+                    return true;
+                }
+                current = current.parent;
+            }
+            return false;
+        }
     }
 }
+
+#endif
