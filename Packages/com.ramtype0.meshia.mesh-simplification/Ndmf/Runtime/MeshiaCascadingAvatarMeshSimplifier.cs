@@ -8,6 +8,8 @@ using System.Linq;
 using UnityEngine;
 using nadena.dev.ndmf.runtime;
 using nadena.dev.modular_avatar.core;
+using UnityEngine.Pool;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
@@ -16,29 +18,30 @@ namespace Meshia.MeshSimplification.Ndmf
     , VRC.SDKBase.IEditorOnly
 #endif
     {
-        public List<MeshiaCascadingAvatarMeshSimplifierTarget> Targets = new();
+        public List<MeshiaCascadingAvatarMeshSimplifierRendererEntry> Entries = new();
         public int TargetTriangleCount = 70000;
         public bool AutoAdjustEnabled = false;
 
-        internal void AddTargets()
+        internal void RefreshEntries()
         {
-            var collectedRenderers = CollectOwnedRenderers();
-
-            var existingTargets = Targets.Select(t => t.GetTargetRenderer(this)).Where(r => r != null).ToHashSet();
-            foreach (var target in collectedRenderers)
+            using (ListPool<Renderer>.Get(out var ownedRenderers))
             {
-                if (existingTargets.Contains(target)) continue;
-                if (!MeshiaCascadingAvatarMeshSimplifierTarget.IsValidTarget(target)) continue;
-                Targets.Add(new MeshiaCascadingAvatarMeshSimplifierTarget(target));
+                GetOwnedRenderers(ownedRenderers);
+                var currentEntries = Entries.Select(t => t.GetTargetRenderer(this));
+                var addedEntries = ownedRenderers.Except(currentEntries).Where(MeshiaCascadingAvatarMeshSimplifierRendererEntry.IsValidTarget).Select(renderer => new MeshiaCascadingAvatarMeshSimplifierRendererEntry(renderer!)).ToArray();
+
+                Entries.AddRange(addedEntries);
             }
+
+            
         }
 
-        internal Dictionary<int, MeshiaCascadingAvatarMeshSimplifierTarget> GetValidTargets()
+        internal Dictionary<int, MeshiaCascadingAvatarMeshSimplifierRendererEntry> GetValidTargets()
         {
-            var validTargets = new Dictionary<int, MeshiaCascadingAvatarMeshSimplifierTarget>();
-            for (int i = 0; i < Targets.Count; i++)
+            var validTargets = new Dictionary<int, MeshiaCascadingAvatarMeshSimplifierRendererEntry>();
+            for (int i = 0; i < Entries.Count; i++)
             {
-                var target = Targets[i];
+                var target = Entries[i];
                 if (target.IsValid(this))
                 {
                     var renderer = target.GetTargetRenderer(this);
@@ -49,46 +52,75 @@ namespace Meshia.MeshSimplification.Ndmf
             return validTargets;
         }
 
-        internal void RemoveInvalidTargets()
+        internal void RemoveInvalidEntries()
         {
-            Targets.RemoveAll(t => !t.IsValid(this));
+            Entries.RemoveAll(t => !t.IsValid(this));
         }
 
-        internal List<Renderer> CollectOwnedRenderers()
+        internal void GetOwnedRenderers(List<Renderer> ownedRenderers)
         {
-            var avatarRoot = RuntimeUtil.FindAvatarInParents(transform);
-            if (avatarRoot == null) return new List<Renderer>();
+            var myScopeOrigin = transform.parent;
 
-            var collectedRenderers = new List<Renderer>();
-            
-            // このコンポーネントがある階層の親から開始し、初期所有者をthisに設定
-            var startTransform = transform.parent ?? avatarRoot;
-            CollectOwnedRenderersRecursively(startTransform, this, collectedRenderers);
-            
-            return collectedRenderers;
-        }
-
-        private void CollectOwnedRenderersRecursively(Transform currentTransform, MeshiaCascadingAvatarMeshSimplifier? currentOwner, List<Renderer> collectedRenderers)
-        {
-            var effectiveOwner = currentTransform.TryGetComponent<MeshiaCascadingAvatarMeshSimplifier>(out var ownerOnSelf) ? ownerOnSelf : currentOwner;
-
-            if (effectiveOwner == this)
+            if(myScopeOrigin == null)
             {
-                if (currentTransform.TryGetComponent<Renderer>(out var renderer))
-                {
-                    collectedRenderers.Add(renderer);
-                }
+                throw new InvalidOperationException($"{nameof(MeshiaCascadingAvatarMeshSimplifier)} should not be attached to root GameObject.");
             }
-
-            foreach (Transform child in currentTransform)
+            using (ListPool<MeshiaCascadingAvatarMeshSimplifier>.Get(out var childSimplifiers))
+            using (HashSetPool<Transform>.Get(out var otherScopeOrigins))
             {
-                CollectOwnedRenderersRecursively(child, effectiveOwner, collectedRenderers);
+                myScopeOrigin.gameObject.GetComponentsInChildren(childSimplifiers);
+                foreach (var childSimplifier in childSimplifiers)
+                {
+                    if (childSimplifier != this)
+                    {
+
+                        var otherScopeOrigin = childSimplifier.transform.parent;
+                        if(otherScopeOrigin == myScopeOrigin)
+                        {
+                            throw new InvalidOperationException($"Multiple {nameof(MeshiaCascadingAvatarMeshSimplifier)} is attached to direct children of GameObject. This is not allowed.");
+                        }
+                        otherScopeOrigins.Add(otherScopeOrigin);
+
+                    }
+                }
+
+                if(otherScopeOrigins.Count == 0)
+                {
+                    myScopeOrigin.gameObject.GetComponentsInChildren(ownedRenderers);
+                }
+                else
+                {
+                    using (ListPool<Renderer>.Get(out var childRenderers))
+                    {
+                        myScopeOrigin.gameObject.GetComponentsInChildren(childRenderers);
+                        foreach (var childRenderer in childRenderers)
+                        {
+                            var currentTransform = childRenderer.transform;
+                            while (currentTransform != myScopeOrigin)
+                            {
+                                if (otherScopeOrigins.Contains(currentTransform))
+                                {
+                                    goto NextChildRenderer;
+                                }
+                                else
+                                {
+                                    currentTransform = currentTransform.parent;
+                                }
+
+                            }
+
+                            ownedRenderers.Add(childRenderer);
+
+                        NextChildRenderer:;
+                        }
+                    }
+                }
             }
         }
 
         internal void ResolveReferences()
         {
-            foreach (var target in Targets)
+            foreach (var target in Entries)
             {
                 target.ResolveReference(this);
             }
@@ -96,7 +128,7 @@ namespace Meshia.MeshSimplification.Ndmf
     }
 
     [Serializable]
-    public record MeshiaCascadingAvatarMeshSimplifierTarget
+    public record MeshiaCascadingAvatarMeshSimplifierRendererEntry
     {
         public AvatarObjectReference RendererObjectReference;
         public int TargetTriangleCount;
@@ -104,7 +136,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public bool Enabled;
         public bool Fixed;
 
-        public MeshiaCascadingAvatarMeshSimplifierTarget(Renderer renderer)
+        public MeshiaCascadingAvatarMeshSimplifierRendererEntry(Renderer renderer)
         {
             RendererObjectReference = new AvatarObjectReference();
             RendererObjectReference.Set(renderer.gameObject);
@@ -114,7 +146,7 @@ namespace Meshia.MeshSimplification.Ndmf
             Fixed = false;
         }
 
-        internal static bool IsValidTarget(Renderer? renderer)
+        internal static bool IsValidTarget([NotNullWhen(true)] Renderer? renderer)
         {
             if (renderer == null) return false;
             if (IsEditorOnlyInHierarchy(renderer.gameObject)) return false;
@@ -128,9 +160,7 @@ namespace Meshia.MeshSimplification.Ndmf
         {
             var obj = RendererObjectReference.Get(container);
             if (obj == null) return null;
-            var renderer = obj.GetComponent<Renderer>();
-            if (renderer == null) return null;
-            return renderer;
+            return obj.TryGetComponent<Renderer>(out var renderer) ? renderer : null;
         }
 
         internal bool IsValid(MeshiaCascadingAvatarMeshSimplifier container) => IsValidTarget(GetTargetRenderer(container));

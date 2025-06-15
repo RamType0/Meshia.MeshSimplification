@@ -55,7 +55,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         }
                         foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                         {
-                            foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
+                            foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
                             {
                                 if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
                                 var mesh = RendererUtility.GetRequiredMesh(cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!);
@@ -87,7 +87,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             }
                             foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                             {
-                                foreach (var cascadingTarget in cascadingMeshSimplifier.Targets)
+                                foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
                                 {
                                     if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
                                     var renderer = cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!;
