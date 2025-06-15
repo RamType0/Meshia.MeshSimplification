@@ -141,7 +141,7 @@ namespace Meshia.MeshSimplification.Ndmf
             Transform current = gameObject.transform;
             while (current != null)
             {
-                if (current.tag == "EditorOnly")
+                if (current.CompareTag("EditorOnly"))
                 {
                     return true;
                 }
