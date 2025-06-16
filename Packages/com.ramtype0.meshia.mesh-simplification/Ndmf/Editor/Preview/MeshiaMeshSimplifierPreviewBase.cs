@@ -15,30 +15,21 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
     {
         public static readonly Dictionary<Renderer, (int proxy, int simplified)> TriangleCountCache = new();
 
-        public static TogglablePreviewNode? ToggleNode { get; protected set; }
+        public static TogglablePreviewNode PreviewControlNode { get; } = TogglablePreviewNode.Create(
+                () => typeof(TDerived).Name,
+                qualifiedName: typeof(TDerived).FullName
+            );
 
-        protected MeshiaMeshSimplifierPreviewBase()
-        {
-        }
+        static TogglablePreviewNode[] PreviewControlNodes { get; } = { PreviewControlNode };
 
-        public IEnumerable<TogglablePreviewNode> GetPreviewControlNodes()
-        {
-            if (ToggleNode != null)
-            {
-                yield return ToggleNode;
-            }
-        }
+        public IEnumerable<TogglablePreviewNode> GetPreviewControlNodes() => PreviewControlNodes;
 
         public bool IsEnabled(ComputeContext context)
         {
-            if (ToggleNode == null)
-            {
-                return true;
-            }
-            return context.Observe(ToggleNode.IsEnabled);
+            return context.Observe(PreviewControlNode.IsEnabled);
         }
 
-        public static bool IsEnabled() => ToggleNode?.IsEnabled.Value ?? true;
+        public static bool IsEnabled() => PreviewControlNode.IsEnabled.Value;
 
         public abstract ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context);
 

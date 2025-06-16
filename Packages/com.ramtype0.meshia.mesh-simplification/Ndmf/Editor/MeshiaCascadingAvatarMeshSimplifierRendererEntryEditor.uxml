@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:GroupBox style="flex-direction: row;">
+        <ui:Toggle name="EnabledToggle" />
+        <uie:ObjectField name="TargetRendererField" />
+        <ui:SliderInt high-value="100000" show-input-field="true" low-value="1" name="TargetTriangleCountSlider" style="flex-grow: 1;" />
+        <ui:Label tabindex="-1" text="/ 100000" parse-escape-sequences="true" display-tooltip-when-elided="true" name="OriginalTriangleCountLabel" />
+        <ui:Toggle name="FixedToggle" />
+        <ui:Button parse-escape-sequences="true" display-tooltip-when-elided="true" name="OptionButton" style="background-color: rgba(88, 88, 88, 0); border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;" />
+    </ui:GroupBox>
+</ui:UXML>

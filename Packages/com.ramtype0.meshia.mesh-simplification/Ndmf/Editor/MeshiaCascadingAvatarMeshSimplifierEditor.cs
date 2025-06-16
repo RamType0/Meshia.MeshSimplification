@@ -15,11 +15,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
     [CustomEditor(typeof(MeshiaCascadingAvatarMeshSimplifier))]
     internal class MeshiaCascadingAvatarMeshSimplifierEditor : UnityEditor.Editor
     {
-        [SerializeField] VisualTreeAsset visualTreeAsset = null!;
+        [SerializeField] VisualTreeAsset editorVisualTreeAsset = null!;
+        [SerializeField] VisualTreeAsset entryEditorVisualTreeAsset;
         private MeshiaCascadingAvatarMeshSimplifier _component = null!;
 
         private SerializedProperty AutoAdjustEnabled = null!;
         private SerializedProperty TargetTriangleCount = null!;
+
+
+        Action<bool>? onNdmfPreviewEnabledChanged;
 
         private (SerializedProperty property, Renderer renderer, int totalTriangleCount)[] _validEntries = Array.Empty<(SerializedProperty, Renderer, int)>();
 
@@ -31,6 +35,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             TargetTriangleCount = serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.TargetTriangleCount));
 
             RefreshValidEntries();
+        }
+
+        private void OnDisable()
+        {
+            if(onNdmfPreviewEnabledChanged != null)
+            {
+                MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.OnChange -= onNdmfPreviewEnabledChanged;
+                onNdmfPreviewEnabledChanged = null;
+            }
         }
 
         private void RefreshValidEntries()
@@ -68,7 +81,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
         {
             //return base.CreateInspectorGUI();
             VisualElement root = new();
-            visualTreeAsset.CloneTree(root);
+            editorVisualTreeAsset.CloneTree(root);
 
             serializedObject.Update();
 
@@ -77,7 +90,14 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var targetTriangleCountPresetDropdownField = root.Q<DropdownField>("TargetTriangleCountPresetDropdownField");
             var adjustButton = root.Q<Button>("AdjustButton");
             var autoAdjustEnabledToggle = root.Q<Toggle>("AutoAdjustEnabledToggle");
-            var imguiContainer = root.Q<IMGUIContainer>();
+
+
+            var triangleCountLabel = root.Q<IMGUIContainer>("TriangleCountLabel");
+            var set50Button = root.Q<Button>("Set50Button");
+            var set100Button = root.Q<Button>("Set100Button");
+            var lockIcon = root.Q<Image>("LockIcon");
+            var imguiArea = root.Q<IMGUIContainer>("IMGUIArea");
+            var ndmfPreviewToggle = root.Q<Toggle>("NdmfPreviewToggle");
             targetTriangleCountField.RegisterValueChangedCallback(changeEvent =>
             {
                 if (!TargetTriangleCountPresetValueToName.TryGetValue(changeEvent.newValue, out var name))
@@ -117,18 +137,50 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 }
             });
 
-            imguiContainer.onGUIHandler = () =>
+            lockIcon.image = EditorGUIUtility.IconContent("AssemblyLock").image;
+
+            triangleCountLabel.onGUIHandler = () =>
+            {
+                var current = GetTotalSimplifiedTriangleCount(true);
+                var sum = GetTotalTriangleCount();
+                var countLabel = $"Current: {current} / {sum}";
+                var labelWidth1 = 7f * countLabel.ToString().Count();
+                var isOverflow = TargetTriangleCount.intValue < current;
+                if (isOverflow) EditorGUILayout.LabelField(countLabel + " - Overflow!", GUIStyleHelper.RedStyle, GUILayout.Width(labelWidth1));
+                else EditorGUILayout.LabelField(countLabel, GUILayout.Width(labelWidth1));
+            };
+
+            set50Button.clicked += () =>
+            {
+                SetQualityAll(0.5f);
+            }; 
+            set100Button.clicked += () =>
+            {
+                SetQualityAll(1f);
+            };
+
+            imguiArea.onGUIHandler = () =>
             {
                 serializedObject.Update();
 
-                EditorGUILayout.Space();
-                TargetGUI();
-                EditorGUILayout.Space();
-                TogglePreviewGUI(MeshiaCascadingAvatarMeshSimplifierPreview.ToggleNode);
+                EntriesGUI();
 
 
                 serializedObject.ApplyModifiedProperties();
             };
+            ndmfPreviewToggle.RegisterValueChangedCallback(changeEvent =>
+            {
+                MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.Value = changeEvent.newValue;
+            });
+
+            ndmfPreviewToggle.SetValueWithoutNotify(MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.Value);
+            onNdmfPreviewEnabledChanged = (newValue) =>
+            {
+                ndmfPreviewToggle.SetValueWithoutNotify(newValue);
+            };
+            MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.OnChange += onNdmfPreviewEnabledChanged;
+
+
 
             return root;
         }
@@ -140,7 +192,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             EditorGUILayout.Space();
             TargetGUI();
             EditorGUILayout.Space();
-            TogglePreviewGUI(MeshiaCascadingAvatarMeshSimplifierPreview.ToggleNode);
+            TogglePreviewGUI(MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode);
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -215,17 +267,22 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 else EditorGUILayout.LabelField(countLabel, GUILayout.Width(labelWidth1));
 
                 GUILayout.FlexibleSpace();
-                
+
                 if (GUILayout.Button("Set 50%", GUILayout.Width(90f))) { SetQualityAll(0.5f); }
                 if (GUILayout.Button("Set 100%", GUILayout.Width(90f))) { SetQualityAll(1.0f); }
 
                 var iconContent = EditorGUIUtility.IconContent("AssemblyLock");
                 iconContent.tooltip = "Lock value";
                 EditorGUILayout.LabelField(iconContent, GUILayout.Width(18f));
-                
+
                 EditorGUILayout.LabelField(GUIContent.none, GUILayout.Width(18f));
             }
 
+            EntriesGUI();
+        }
+
+        private void EntriesGUI()
+        {
             for (int i = 0; i < _validEntries.Length; i++)
             {
                 var enabledTarget = _validEntries[i].property;
@@ -238,7 +295,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     EditorGUILayout.PropertyField(enabledValue, GUIContent.none, GUILayout.Width(18f));
-                    
+
                     EditorGUI.BeginDisabledGroup(!enabledValue.boolValue);
                     EditorGUI.BeginChangeCheck();
                     EditorGUILayout.ObjectField(renderer, typeof(Renderer), false, GUILayout.MinWidth(100f)); // ReadOnly
@@ -249,8 +306,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     }
                     EditorGUILayout.LabelField(new GUIContent($"/ {totalTriangleCount}"), GUILayout.Width(70f));
                     EditorGUILayout.PropertyField(fixedValue, GUIContent.none, GUILayout.Width(18f));
-                    if (GUILayout.Button(EditorGUIUtility.IconContent("Settings@2x"), GUIStyleHelper.IconButtonStyle, GUILayout.Width(16f), GUILayout.Height(16f))) 
-                    { 
+                    if (GUILayout.Button(EditorGUIUtility.IconContent("Settings@2x"), GUIStyleHelper.IconButtonStyle, GUILayout.Width(16f), GUILayout.Height(16f)))
+                    {
                         _currentSimplifySettingTargetIndex = i;
                         _showCurrentSimplifySetting = true;
                     }
@@ -262,12 +319,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             {
                 var renderer = _validEntries[_currentSimplifySettingTargetIndex].renderer;
                 var options = _validEntries[_currentSimplifySettingTargetIndex].property.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Options));
-                
+
                 _showCurrentSimplifySetting = EditorGUILayout.Foldout(_showCurrentSimplifySetting, $"Simplifier Options for {renderer?.name}");
                 if (_showCurrentSimplifySetting)
                 {
                     var iterator = options;
-                    iterator.NextVisible(true); 
+                    iterator.NextVisible(true);
                     EditorGUILayout.PropertyField(iterator);
                     while (iterator.NextVisible(false) && iterator.depth == 3)
                     {
@@ -277,12 +334,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             }
         }
 
-        private void TogglePreviewGUI(TogglablePreviewNode? toggleNode)
+        private void TogglePreviewGUI(TogglablePreviewNode toggleNode)
         {
-            if(toggleNode == null)
-            {
-                return; 
-            }
             if (toggleNode.IsEnabled.Value)
             {
                 if (GUILayout.Button("Disable NDMF Preview"))
@@ -432,6 +485,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     targetTriangleCount.intValue = (int)(totalTriangleCount * ratio);
                 }
             }
+            serializedObject.ApplyModifiedProperties();
         }
 
     }

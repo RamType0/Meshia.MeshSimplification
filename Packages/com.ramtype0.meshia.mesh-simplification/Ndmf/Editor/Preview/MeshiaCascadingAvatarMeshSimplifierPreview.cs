@@ -10,14 +10,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 {
     internal class MeshiaCascadingAvatarMeshSimplifierPreview : MeshiaMeshSimplifierPreviewBase<MeshiaCascadingAvatarMeshSimplifierPreview>
     {
-        static MeshiaCascadingAvatarMeshSimplifierPreview()
-        {
-            ToggleNode = TogglablePreviewNode.Create(
-                () => "MeshiaCascadingAvatarMeshSimplifier",
-                qualifiedName: "Meshia.MeshSimplification.MeshiaCascadingAvatarMeshSimplifier"
-            );
-        }
-
         public override ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context)
         {
             var groups = new List<RenderGroup>();
