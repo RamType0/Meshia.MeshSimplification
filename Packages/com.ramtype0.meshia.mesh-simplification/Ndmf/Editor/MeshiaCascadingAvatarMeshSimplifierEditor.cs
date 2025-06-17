@@ -9,6 +9,7 @@ using nadena.dev.ndmf.preview;
 using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using System.Reflection;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
@@ -25,7 +26,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         Action<bool>? onNdmfPreviewEnabledChanged;
 
-        private (SerializedProperty property, Renderer renderer, int totalTriangleCount)[] _validEntries = Array.Empty<(SerializedProperty, Renderer, int)>();
+        private (SerializedProperty property, Renderer Renderer, int OriginalTriangleCount)[] _validEntries = Array.Empty<(SerializedProperty, Renderer, int)>();
 
         private void OnEnable()
         {
@@ -58,7 +59,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             var targetsProperty = serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.Entries));
 
-            var targetProperties = new List<(SerializedProperty property, Renderer renderer, int totalTriangleCount)>();
+            var targetProperties = new List<(SerializedProperty property, Renderer renderer, int OriginalTriangleCount)>();
 
             for (int i = 0; i < entries.Count; i++)
             {
@@ -68,12 +69,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 {
                     var elementProperty = targetsProperty.GetArrayElementAtIndex(i);
 
-                    var totalTriangleCount = RendererUtility.GetRequiredMesh(renderer).GetTriangleCount();
-                    targetProperties.Add((elementProperty, renderer, totalTriangleCount));
+                    var OriginalTriangleCount = RendererUtility.GetRequiredMesh(renderer).GetTriangleCount();
+                    targetProperties.Add((elementProperty, renderer, OriginalTriangleCount));
                 }
             }
 
-            _validEntries = targetProperties.OrderByDescending(tp => tp.totalTriangleCount).ToArray();
+            _validEntries = targetProperties.OrderByDescending(tp => tp.OriginalTriangleCount).ToArray();
 
         }
 
@@ -95,7 +96,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var triangleCountLabel = root.Q<IMGUIContainer>("TriangleCountLabel");
             var set50Button = root.Q<Button>("Set50Button");
             var set100Button = root.Q<Button>("Set100Button");
-            var lockIcon = root.Q<Image>("LockIcon");
+            var entriesListView = root.Q<ListView>("EntriesListView");
             var imguiArea = root.Q<IMGUIContainer>("IMGUIArea");
             var ndmfPreviewToggle = root.Q<Toggle>("NdmfPreviewToggle");
             targetTriangleCountField.RegisterValueChangedCallback(changeEvent =>
@@ -131,13 +132,17 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             autoAdjustEnabledToggle.RegisterValueChangedCallback(changeEvent =>
             {
-                if (AutoAdjustEnabled.boolValue)
+                var autoAdjustEnabled = AutoAdjustEnabled.boolValue;
+
+                set50Button.SetEnabled(!autoAdjustEnabled);
+                set100Button.SetEnabled(!autoAdjustEnabled);
+
+                if (autoAdjustEnabled)
                 {
                     AdjustQuality();
                 }
             });
 
-            lockIcon.image = EditorGUIUtility.IconContent("AssemblyLock").image;
 
             triangleCountLabel.onGUIHandler = () =>
             {
@@ -158,15 +163,39 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             {
                 SetQualityAll(1f);
             };
-
-            imguiArea.onGUIHandler = () =>
+            entriesListView.itemsSource = _validEntries;
+            entriesListView.bindItem = (itemElement, index) =>
             {
-                serializedObject.Update();
 
-                EntriesGUI();
+                var entry = _validEntries[index];
+                var itemRoot = (TemplateContainer)itemElement;
+                var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
+                var originalTriangleCountField = itemRoot.Q<IntegerField>("OriginalTriangleCountField");
+                itemRoot.BindProperty(entry.property);
+                itemRoot.userData = index;
 
 
-                serializedObject.ApplyModifiedProperties();
+                targetTriangleCountSlider.highValue = entry.OriginalTriangleCount;
+                originalTriangleCountField.value = entry.OriginalTriangleCount;
+            };
+
+
+            entriesListView.makeItem = () =>
+            {
+                var itemRoot = entryEditorVisualTreeAsset.CloneTree();
+                var targetObjectField = itemRoot.Q<ObjectField>("TargetObjectField");
+                var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
+                targetObjectField.SetEnabled(false);
+
+                targetTriangleCountSlider.RegisterValueChangedCallback(changeEvent =>
+                {
+                    if (itemRoot.userData is int itemIndex && AutoAdjustEnabled.boolValue)
+                    {
+                        AdjustQuality(itemIndex);
+                    }
+                });
+
+                return itemRoot;
             };
             ndmfPreviewToggle.RegisterValueChangedCallback(changeEvent =>
             {
@@ -286,9 +315,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             for (int i = 0; i < _validEntries.Length; i++)
             {
                 var enabledTarget = _validEntries[i].property;
-                var renderer = _validEntries[i].renderer;
+                var renderer = _validEntries[i].Renderer;
                 var targetTriangleCount = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.TargetTriangleCount));
-                var totalTriangleCount = GetTriangleCount(i, true);
+                var OriginalTriangleCount = GetOriginalTriangleCount(i, true);
                 var fixedValue = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Fixed));
                 var enabledValue = enabledTarget.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Enabled));
 
@@ -299,12 +328,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     EditorGUI.BeginDisabledGroup(!enabledValue.boolValue);
                     EditorGUI.BeginChangeCheck();
                     EditorGUILayout.ObjectField(renderer, typeof(Renderer), false, GUILayout.MinWidth(100f)); // ReadOnly
-                    EditorGUILayout.IntSlider(targetTriangleCount, 0, totalTriangleCount, GUIContent.none, GUILayout.MinWidth(140f));
+                    EditorGUILayout.IntSlider(targetTriangleCount, 0, OriginalTriangleCount, GUIContent.none, GUILayout.MinWidth(140f));
                     if (EditorGUI.EndChangeCheck() && AutoAdjustEnabled.boolValue)
                     {
                         AdjustQuality(i);
                     }
-                    EditorGUILayout.LabelField(new GUIContent($"/ {totalTriangleCount}"), GUILayout.Width(70f));
+                    EditorGUILayout.LabelField(new GUIContent($"/ {OriginalTriangleCount}"), GUILayout.Width(70f));
                     EditorGUILayout.PropertyField(fixedValue, GUIContent.none, GUILayout.Width(18f));
                     if (GUILayout.Button(EditorGUIUtility.IconContent("Settings@2x"), GUIStyleHelper.IconButtonStyle, GUILayout.Width(16f), GUILayout.Height(16f)))
                     {
@@ -317,7 +346,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             if (_currentSimplifySettingTargetIndex != -1)
             {
-                var renderer = _validEntries[_currentSimplifySettingTargetIndex].renderer;
+                var renderer = _validEntries[_currentSimplifySettingTargetIndex].Renderer;
                 var options = _validEntries[_currentSimplifySettingTargetIndex].property.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Options));
 
                 _showCurrentSimplifySetting = EditorGUILayout.Foldout(_showCurrentSimplifySetting, $"Simplifier Options for {renderer?.name}");
@@ -367,7 +396,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var sum = 0;
             for (int i = 0; i < _validEntries.Length; i++)
             {
-                sum += GetTriangleCount(i, false);
+                sum += GetOriginalTriangleCount(i, false);
             }
             return sum;
         }
@@ -379,10 +408,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             
             if (!targetProp.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Enabled)).boolValue)
             {
-                return GetTriangleCount(index, usePreview);
+                return GetOriginalTriangleCount(index, usePreview);
             }
             // プレビューが有効な場合は実際に簡略された後の値を用い、無効な場合は目標値を用いる
-            else if (usePreview && MeshiaCascadingAvatarMeshSimplifierPreview.IsEnabled() && MeshiaCascadingAvatarMeshSimplifierPreview.TriangleCountCache.TryGetValue(target.renderer, out var triCount))
+            else if (usePreview && MeshiaCascadingAvatarMeshSimplifierPreview.IsEnabled() && MeshiaCascadingAvatarMeshSimplifierPreview.TriangleCountCache.TryGetValue(target.Renderer, out var triCount))
             {
                 return triCount.simplified;
             }
@@ -392,19 +421,19 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             }
         }
 
-        private int GetTriangleCount(int index, bool usePreview)
+        private int GetOriginalTriangleCount(int index, bool usePreview)
         {
             var target = _validEntries[index];
             var targetProp = target.property;
 
             // プレビューが有効かつEnabledな対象な場合はProxyRendererの値を用い、無効な場合は事前の値を用いる
-            if (usePreview && MeshiaCascadingAvatarMeshSimplifierPreview.IsEnabled() && targetProp.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Enabled)).boolValue && MeshiaCascadingAvatarMeshSimplifierPreview.TriangleCountCache.TryGetValue(target.renderer, out var triCount))
+            if (usePreview && MeshiaCascadingAvatarMeshSimplifierPreview.IsEnabled() && targetProp.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Enabled)).boolValue && MeshiaCascadingAvatarMeshSimplifierPreview.TriangleCountCache.TryGetValue(target.Renderer, out var triCount))
             {
                 return triCount.proxy;
             }
             else
             {
-                return target.totalTriangleCount;
+                return target.OriginalTriangleCount;
             }
         }
 
@@ -459,7 +488,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         var targetTriangleCountProp = target.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.TargetTriangleCount));
 
                         var currentValue = GetSimplifiedTriangleCount(i, false);
-                        var maxTriangleCount = GetTriangleCount(i, false);
+                        var maxTriangleCount = GetOriginalTriangleCount(i, false);
                         
                         var newValue = Mathf.Clamp((int)(currentValue * proportion), 0, maxTriangleCount);
                         
@@ -478,11 +507,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var simplifierTarget = _validEntries[i].property;
                 var fixedValue = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Fixed));
                 var targetTriangleCount = simplifierTarget.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.TargetTriangleCount));
-                var totalTriangleCount = GetTriangleCount(i, true);
+                var OriginalTriangleCount = GetOriginalTriangleCount(i, true);
 
                 if (!fixedValue.boolValue)
                 {
-                    targetTriangleCount.intValue = (int)(totalTriangleCount * ratio);
+                    targetTriangleCount.intValue = (int)(OriginalTriangleCount * ratio);
                 }
             }
             serializedObject.ApplyModifiedProperties();
