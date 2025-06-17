@@ -13,10 +13,9 @@
         <ui:GroupBox style="flex-direction: row;">
             <ui:Button text="Set 50%" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Set50Button" />
             <ui:Button text="Set 100%" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Set100Button" />
-            <ui:Image name="LockIcon" tooltip="Lock value" />
         </ui:GroupBox>
     </ui:GroupBox>
-    <ui:ListView selection-type="None" name="EntriesList" />
+    <ui:ListView selection-type="None" name="EntriesListView" show-bound-collection-size="false" virtualization-method="DynamicHeight" />
     <ui:IMGUIContainer name="IMGUIArea" />
     <ui:Toggle label="Enable NDMF Preview" name="NdmfPreviewToggle" />
 </ui:UXML>
