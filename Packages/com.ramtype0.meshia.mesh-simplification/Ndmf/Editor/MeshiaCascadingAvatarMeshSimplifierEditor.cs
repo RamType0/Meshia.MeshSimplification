@@ -82,7 +82,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         public override VisualElement CreateInspectorGUI()
         {
-            //return base.CreateInspectorGUI();
             VisualElement root = new();
             editorVisualTreeAsset.CloneTree(root);
 
@@ -136,9 +135,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             {
                 var autoAdjustEnabled = AutoAdjustEnabled.boolValue;
 
-                set50Button.SetEnabled(!autoAdjustEnabled);
-                set100Button.SetEnabled(!autoAdjustEnabled);
-
                 if (autoAdjustEnabled)
                 {
                     AdjustQuality();
@@ -159,10 +155,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             set50Button.clicked += () =>
             {
+                AutoAdjustEnabled.boolValue = false;
                 SetQualityAll(0.5f);
             }; 
             set100Button.clicked += () =>
             {
+                AutoAdjustEnabled.boolValue = false;
                 SetQualityAll(1f);
             };
             entriesListView.itemsSource = _validEntries;
