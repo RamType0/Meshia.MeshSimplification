@@ -185,6 +185,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var itemRoot = entryEditorVisualTreeAsset.CloneTree();
                 var targetObjectField = itemRoot.Q<ObjectField>("TargetObjectField");
                 var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
+                var optionsToggle = itemRoot.Q<Toggle>("OptionsToggle");
+                var optionsField = itemRoot.Q<PropertyField>("OptionsField");
+
                 targetObjectField.SetEnabled(false);
 
                 targetTriangleCountSlider.RegisterValueChangedCallback(changeEvent =>
@@ -193,6 +196,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     {
                         AdjustQuality(itemIndex);
                     }
+                });
+
+                optionsToggle.RegisterValueChangedCallback(changeEvent =>
+                {
+                    optionsField.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
                 });
 
                 return itemRoot;
