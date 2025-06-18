@@ -55,6 +55,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             Undo.RecordObject(_component, "Get valid entries");
             _component.RefreshEntries();
 
+            serializedObject.Update();
+
             var entries = _component.Entries;
 
             var targetsProperty = serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.Entries));
