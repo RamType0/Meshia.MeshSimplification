@@ -7,6 +7,7 @@
         <ui:Label tabindex="-1" text="/" parse-escape-sequences="true" display-tooltip-when-elided="true" name="OriginalTriangleCountLabel" enable-rich-text="false" style="align-self: center; padding-left: 5px; padding-right: 0;" />
         <ui:IntegerField value="99999" name="OriginalTriangleCountField" readonly="true" />
         <ui:Toggle name="FixedToggle" binding-path="Fixed" style="align-self: center;" />
+        <ui:Toggle name="OptionsToggle" style="align-self: center;" />
     </ui:VisualElement>
-    <uie:PropertyField binding-path="Options" name="OptionsFIeld" style="display: flex;" />
+    <uie:PropertyField binding-path="Options" name="OptionsField" style="display: none;" />
 </ui:UXML>
