@@ -4,6 +4,7 @@
         <ui:Toggle name="EnabledToggle" binding-path="Enabled" />
         <uie:ObjectField binding-path="RendererObjectReference.targetObject" name="TargetObjectField" style="width: 100px;" />
         <ui:SliderInt high-value="100000" show-input-field="true" low-value="1" name="TargetTriangleCountSlider" binding-path="TargetTriangleCount" style="flex-grow: 1;" />
+        <ui:SliderInt high-value="100000" show-input-field="true" low-value="1" name="OriginalTriangleCountSlider" style="display: none; flex-grow: 1;" />
         <ui:Label tabindex="-1" text="/" parse-escape-sequences="true" display-tooltip-when-elided="true" name="OriginalTriangleCountLabel" enable-rich-text="false" style="align-self: center; padding-left: 5px; padding-right: 0;" />
         <ui:IntegerField value="99999" name="OriginalTriangleCountField" readonly="true" />
         <ui:Toggle name="FixedToggle" binding-path="Fixed" style="align-self: center;" />
