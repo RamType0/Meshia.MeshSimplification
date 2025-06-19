@@ -170,12 +170,17 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var entry = _validEntries[index];
                 var itemRoot = (TemplateContainer)itemElement;
                 var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
+                var originalTriangleCountSlider = itemRoot.Q<SliderInt>("OriginalTriangleCountSlider");
                 var originalTriangleCountField = itemRoot.Q<IntegerField>("OriginalTriangleCountField");
                 itemRoot.BindProperty(entry.property);
                 itemRoot.userData = index;
 
 
                 targetTriangleCountSlider.highValue = entry.OriginalTriangleCount;
+
+                originalTriangleCountSlider.value = entry.OriginalTriangleCount;
+                originalTriangleCountSlider.highValue = entry.OriginalTriangleCount;
+
                 originalTriangleCountField.value = entry.OriginalTriangleCount;
             };
 
@@ -183,10 +188,25 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             entriesListView.makeItem = () =>
             {
                 var itemRoot = entryEditorVisualTreeAsset.CloneTree();
+                var enabledToggle = itemRoot.Q<Toggle>("EnabledToggle");
                 var targetObjectField = itemRoot.Q<ObjectField>("TargetObjectField");
                 var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
+                var originalTriangleCountSlider = itemRoot.Q<SliderInt>("OriginalTriangleCountSlider");
                 var optionsToggle = itemRoot.Q<Toggle>("OptionsToggle");
                 var optionsField = itemRoot.Q<PropertyField>("OptionsField");
+                enabledToggle.RegisterValueChangedCallback(changeEvent =>
+                {
+                    if (changeEvent.newValue)
+                    {
+                        targetTriangleCountSlider.style.display = DisplayStyle.Flex;
+                        originalTriangleCountSlider.style.display = DisplayStyle.None;
+                    }
+                    else
+                    {
+                        targetTriangleCountSlider.style.display = DisplayStyle.None;
+                        originalTriangleCountSlider.style.display = DisplayStyle.Flex;
+                    }
+                });
 
                 targetObjectField.SetEnabled(false);
 
@@ -198,11 +218,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     }
                 });
 
+                originalTriangleCountSlider.SetEnabled(false);
                 optionsToggle.RegisterValueChangedCallback(changeEvent =>
                 {
                     optionsField.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
                 });
-
+                
                 return itemRoot;
             };
             ndmfPreviewToggle.RegisterValueChangedCallback(changeEvent =>
