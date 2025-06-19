@@ -22,7 +22,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public int TargetTriangleCount = 70000;
         public bool AutoAdjustEnabled = false;
 
-        internal void RefreshEntries()
+        public void RefreshEntries()
         {
             using (ListPool<Renderer>.Get(out var ownedRenderers))
             {
@@ -36,28 +36,7 @@ namespace Meshia.MeshSimplification.Ndmf
             
         }
 
-        internal Dictionary<int, MeshiaCascadingAvatarMeshSimplifierRendererEntry> GetValidTargets()
-        {
-            var validTargets = new Dictionary<int, MeshiaCascadingAvatarMeshSimplifierRendererEntry>();
-            for (int i = 0; i < Entries.Count; i++)
-            {
-                var target = Entries[i];
-                if (target.IsValid(this))
-                {
-                    var renderer = target.GetTargetRenderer(this);
-                    if (renderer == null) continue;
-                    validTargets.Add(i, target);
-                }
-            }
-            return validTargets;
-        }
-
-        internal void RemoveInvalidEntries()
-        {
-            Entries.RemoveAll(t => !t.IsValid(this));
-        }
-
-        internal void GetOwnedRenderers(List<Renderer> ownedRenderers)
+        private void GetOwnedRenderers(List<Renderer> ownedRenderers)
         {
             var myScopeOrigin = transform.parent;
 
@@ -118,7 +97,7 @@ namespace Meshia.MeshSimplification.Ndmf
             }
         }
 
-        internal void ResolveReferences()
+        public void ResolveReferences()
         {
             foreach (var target in Entries)
             {
