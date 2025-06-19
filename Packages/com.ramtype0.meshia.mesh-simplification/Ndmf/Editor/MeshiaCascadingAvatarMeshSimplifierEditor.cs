@@ -95,8 +95,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
 
             var triangleCountLabel = root.Q<IMGUIContainer>("TriangleCountLabel");
-            var set50Button = root.Q<Button>("Set50Button");
-            var set100Button = root.Q<Button>("Set100Button");
+            var resetButton = root.Q<Button>("ResetButton");
             var entriesListView = root.Q<ListView>("EntriesListView");
             var imguiArea = root.Q<IMGUIContainer>("IMGUIArea");
             var ndmfPreviewToggle = root.Q<Toggle>("NdmfPreviewToggle");
@@ -111,13 +110,13 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 if (AutoAdjustEnabled.boolValue)
                 {
                     AdjustQuality();
+                    serializedObject.ApplyModifiedProperties();
                 }
             });
 
             targetTriangleCountPresetDropdownField.choices = TargetTriangleCountPresetNameToValue.Keys.ToList();
             targetTriangleCountPresetDropdownField.RegisterValueChangedCallback(changeEvent =>
             {
-
                 if(TargetTriangleCountPresetNameToValue.TryGetValue(changeEvent.newValue, out var value))
                 {
                     TargetTriangleCount.intValue = value;
@@ -129,6 +128,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             adjustButton.clicked += () =>
             {
                 AdjustQuality();
+                serializedObject.ApplyModifiedProperties();
             };
 
             autoAdjustEnabledToggle.RegisterValueChangedCallback(changeEvent =>
@@ -138,6 +138,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 if (autoAdjustEnabled)
                 {
                     AdjustQuality();
+                    serializedObject.ApplyModifiedProperties();
                 }
             });
 
@@ -145,7 +146,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             triangleCountLabel.onGUIHandler = () =>
             {
                 var current = GetTotalSimplifiedTriangleCount(true);
-                var sum = GetTotalTriangleCount();
+                var sum = GetTotalOriginalTriangleCount();
                 var countLabel = $"Current: {current} / {sum}";
                 var labelWidth1 = 7f * countLabel.ToString().Count();
                 var isOverflow = TargetTriangleCount.intValue < current;
@@ -153,15 +154,20 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 else EditorGUILayout.LabelField(countLabel, GUILayout.Width(labelWidth1));
             };
 
-            set50Button.clicked += () =>
+            resetButton.clicked += () =>
             {
-                AutoAdjustEnabled.boolValue = false;
-                SetQualityAll(0.5f);
-            }; 
-            set100Button.clicked += () =>
-            {
-                AutoAdjustEnabled.boolValue = false;
-                SetQualityAll(1f);
+                var originalTriangleCount = GetTotalOriginalTriangleCount();
+
+                var quality = TargetTriangleCount.intValue / (float)originalTriangleCount;
+
+                foreach (var entry in _validEntries)
+                {
+                    entry.property.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Enabled)).boolValue = true;
+                    entry.property.FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.Fixed)).boolValue = false;
+                }
+
+                SetQualityAll(quality);
+                serializedObject.ApplyModifiedProperties();
             };
             entriesListView.itemsSource = _validEntries;
             entriesListView.bindItem = (itemElement, index) =>
@@ -215,6 +221,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     if (itemRoot.userData is int itemIndex && AutoAdjustEnabled.boolValue)
                     {
                         AdjustQuality(itemIndex);
+                        serializedObject.ApplyModifiedProperties();
                     }
                 });
 
@@ -317,7 +324,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 var current = GetTotalSimplifiedTriangleCount(true);
-                var sum = GetTotalTriangleCount();
+                var sum = GetTotalOriginalTriangleCount();
                 var countLabel = $"Current: {current} / {sum}";
                 var labelWidth1 = 7f * countLabel.ToString().Count();
                 var isOverflow = TargetTriangleCount.intValue < current;
@@ -420,7 +427,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             return sum;
         }
 
-        private int GetTotalTriangleCount()
+        private int GetTotalOriginalTriangleCount()
         {
             var sum = 0;
             for (int i = 0; i < _validEntries.Length; i++)
@@ -525,8 +532,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     }
                 }
             }
-
-            serializedObject.ApplyModifiedProperties();
         }
 
         private void SetQualityAll(float ratio)
@@ -543,7 +548,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     targetTriangleCount.intValue = (int)(OriginalTriangleCount * ratio);
                 }
             }
-            serializedObject.ApplyModifiedProperties();
         }
 
     }
