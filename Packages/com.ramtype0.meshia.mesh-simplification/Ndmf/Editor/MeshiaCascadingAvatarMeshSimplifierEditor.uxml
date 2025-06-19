@@ -10,10 +10,7 @@
     </ui:GroupBox>
     <ui:GroupBox style="flex-direction: row; justify-content: space-between; display: flex;">
         <ui:IMGUIContainer name="TriangleCountLabel" />
-        <ui:GroupBox style="flex-direction: row;">
-            <ui:Button text="Set 50%" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Set50Button" />
-            <ui:Button text="Set 100%" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Set100Button" />
-        </ui:GroupBox>
+        <ui:Button text="Reset" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ResetButton" />
     </ui:GroupBox>
     <ui:ListView selection-type="None" name="EntriesListView" show-bound-collection-size="false" virtualization-method="DynamicHeight" />
     <ui:IMGUIContainer name="IMGUIArea" />
