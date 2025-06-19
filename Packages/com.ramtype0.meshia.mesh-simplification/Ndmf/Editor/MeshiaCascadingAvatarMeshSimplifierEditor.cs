@@ -53,7 +53,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             // SerializedPropertyの取得及びRendererや簡略化前のTriangleCountを取得しておく。
 
             Undo.RecordObject(_component, "Get valid entries");
-            _component.RefreshEntries();
+            try
+            {
+                _component.RefreshEntries();
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogException(e, target);
+                return;
+            }
 
             serializedObject.Update();
 
@@ -211,6 +219,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     {
                         targetTriangleCountSlider.style.display = DisplayStyle.None;
                         originalTriangleCountSlider.style.display = DisplayStyle.Flex;
+                    }
+                    if (AutoAdjustEnabled.boolValue)
+                    {
+                        AdjustQuality();
+                        serializedObject.ApplyModifiedProperties();
                     }
                 });
 
