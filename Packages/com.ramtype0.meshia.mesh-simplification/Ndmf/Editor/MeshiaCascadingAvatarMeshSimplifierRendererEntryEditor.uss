@@ -9,9 +9,14 @@
 }
 
 #OptionsToggle #unity-checkmark {
-    background-image: resource("icons/Settings.png");
+    background-image: resource('icons/Settings.png');
 }
 
 #OptionsToggle:checked #unity-checkmark {
-    background-image: resource("icons/d_MoreOptions.png");
+    background-image: resource('icons/d_MoreOptions.png');
+}
+
+SliderInt #unity-text-field {
+    width: auto;
+    min-width: 50px;
 }
