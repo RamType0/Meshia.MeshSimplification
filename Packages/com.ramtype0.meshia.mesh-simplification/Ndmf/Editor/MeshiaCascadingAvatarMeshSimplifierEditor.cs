@@ -9,7 +9,6 @@ using nadena.dev.ndmf.preview;
 using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
-using System.Reflection;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
@@ -94,8 +93,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             editorVisualTreeAsset.CloneTree(root);
 
             serializedObject.Update();
-
+            
             root.Bind(serializedObject);
+            var attachedToRootWarning = root.Q<HelpBox>("AttachedToRootWarning");
+            var mainElement = root.Q<VisualElement>("MainElement");
             var targetTriangleCountField = root.Q<IntegerField>("TargetTriangleCountField");
             var targetTriangleCountPresetDropdownField = root.Q<DropdownField>("TargetTriangleCountPresetDropdownField");
             var adjustButton = root.Q<Button>("AdjustButton");
@@ -105,8 +106,16 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var triangleCountLabel = root.Q<IMGUIContainer>("TriangleCountLabel");
             var resetButton = root.Q<Button>("ResetButton");
             var entriesListView = root.Q<ListView>("EntriesListView");
-            var imguiArea = root.Q<IMGUIContainer>("IMGUIArea");
             var ndmfPreviewToggle = root.Q<Toggle>("NdmfPreviewToggle");
+
+            if (_component.transform.parent == null)
+            {
+                attachedToRootWarning.style.display = DisplayStyle.Flex;
+
+                mainElement.style.display = DisplayStyle.None;
+            }
+
+
             targetTriangleCountField.RegisterValueChangedCallback(changeEvent =>
             {
                 if (!TargetTriangleCountPresetValueToName.TryGetValue(changeEvent.newValue, out var name))

@@ -1,18 +1,19 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <ui:HelpBox message-type="Warning" name="NdmfNotImportedWarning" text="This component has no effect without NDMF imported to the project." style="visibility: visible; display: none;" />
-    <ui:GroupBox style="flex-direction: row;">
-        <ui:IntegerField label="Target Triangle Count" value="70000" name="TargetTriangleCountField" binding-path="TargetTriangleCount" />
-        <ui:DropdownField name="TargetTriangleCountPresetDropdownField" />
-    </ui:GroupBox>
-    <ui:GroupBox style="flex-direction: row;">
-        <ui:Button text="Adjust" parse-escape-sequences="true" display-tooltip-when-elided="true" enable-rich-text="false" name="AdjustButton" />
-        <ui:Toggle label="Enable Auto Adjust" binding-path="AutoAdjustEnabled" name="AutoAdjustEnabledToggle" />
-    </ui:GroupBox>
-    <ui:GroupBox style="flex-direction: row; justify-content: space-between; display: flex;">
-        <ui:IMGUIContainer name="TriangleCountLabel" />
-        <ui:Button text="Reset" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ResetButton" />
-    </ui:GroupBox>
-    <ui:ListView selection-type="None" name="EntriesListView" show-bound-collection-size="false" virtualization-method="DynamicHeight" />
-    <ui:IMGUIContainer name="IMGUIArea" />
-    <ui:Toggle label="Enable NDMF Preview" name="NdmfPreviewToggle" />
+    <ui:HelpBox name="AttachedToRootWarning" message-type="Error" text="This component should not be attached to root GameObject." style="display: none;" />
+    <ui:VisualElement name="MainElement" style="flex-grow: 1;">
+        <ui:GroupBox name="GroupBox" style="flex-direction: row;">
+            <ui:IntegerField label="Target Triangle Count" value="70000" name="TargetTriangleCountField" binding-path="TargetTriangleCount" />
+            <ui:DropdownField name="TargetTriangleCountPresetDropdownField" />
+        </ui:GroupBox>
+        <ui:GroupBox style="flex-direction: row;">
+            <ui:Button text="Adjust" parse-escape-sequences="true" display-tooltip-when-elided="true" enable-rich-text="false" name="AdjustButton" />
+            <ui:Toggle label="Enable Auto Adjust" binding-path="AutoAdjustEnabled" name="AutoAdjustEnabledToggle" />
+        </ui:GroupBox>
+        <ui:GroupBox style="flex-direction: row; justify-content: space-between; display: flex;">
+            <ui:IMGUIContainer name="TriangleCountLabel" />
+            <ui:Button text="Reset" parse-escape-sequences="true" display-tooltip-when-elided="true" name="ResetButton" />
+        </ui:GroupBox>
+        <ui:ListView selection-type="None" name="EntriesListView" show-bound-collection-size="false" virtualization-method="DynamicHeight" />
+        <ui:Toggle label="Enable NDMF Preview" name="NdmfPreviewToggle" />
+    </ui:VisualElement>
 </ui:UXML>
