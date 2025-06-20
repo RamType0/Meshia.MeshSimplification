@@ -27,6 +27,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         private (SerializedProperty property, Renderer Renderer, int OriginalTriangleCount)[] _validEntries = Array.Empty<(SerializedProperty, Renderer, int)>();
 
+
+        [MenuItem("GameObject/Meshia/Cascading Avatar Mesh Simplifier", false, 0)]
+        static void AddCascadingAvatarMeshSimplifier()
+        {
+            var go = new GameObject("Meshia Cascading Avatar Mesh Simplifier");
+            go.AddComponent<MeshiaCascadingAvatarMeshSimplifier>();
+            go.transform.parent = Selection.activeGameObject.transform;
+            Undo.RegisterCreatedObjectUndo(go, "Create Meshia Cascading Avatar Mesh Simplifier");
+        }
         private void OnEnable()
         {
             _component = (MeshiaCascadingAvatarMeshSimplifier)target;
