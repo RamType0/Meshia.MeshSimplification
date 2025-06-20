@@ -22,10 +22,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 #if ENABLE_MODULAR_AVATAR
 
             InPhase(BuildPhase.Resolving)
-                .Run("Resolve References", ctx =>
+                .Run("Resolve References", context =>
                 {
-                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
-                    foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
+                    var meshiaCascadingMeshSimplifiers = context.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
+                    foreach (var cascadingMeshSimplifier in meshiaCascadingMeshSimplifiers)
                     {
                         cascadingMeshSimplifier.ResolveReferences();
                     }
@@ -35,41 +35,42 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
             InPhase(BuildPhase.Optimizing)
                 .BeforePlugin("com.anatawa12.avatar-optimizer")
-                .Run("Simplify meshes", ctx =>
+                .Run("Simplify meshes", context =>
                 {
-                    var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
+                    var meshiaMeshSimplifiers = context.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
 #if ENABLE_MODULAR_AVATAR
 
-                    var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
+                    var meshiaCascadingMeshSimplifiers = context.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
 #endif
 
                     using (ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
-                        foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
+                        foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
                         {
-                            if (ndmfMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                            if (meshiaMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
                             {
                                 var sourceMesh = skinnedMeshRenderer.sharedMesh;
                                 Mesh simplifiedMesh = new();
-                                parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
+                                parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, simplifiedMesh));
                             }
-                            if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
+                            if (meshiaMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
                             {
                                 var sourceMesh = meshFilter.sharedMesh;
                                 Mesh simplifiedMesh = new();
-                                parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
+                                parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, simplifiedMesh));
                             }
                         }
 #if ENABLE_MODULAR_AVATAR
 
-                        foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
+                        foreach (var meshiaCascadingMeshSimplifier in meshiaCascadingMeshSimplifiers)
                         {
-                            foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
+                            foreach (var entry in meshiaCascadingMeshSimplifier.Entries)
                             {
-                                if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
-                                var mesh = RendererUtility.GetRequiredMesh(cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!);
-                                var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
-                                parameters.Add((mesh, target, cascadingTarget.Options, mesh));
+                                if (!entry.IsValid(meshiaCascadingMeshSimplifier) || !entry.Enabled) continue;
+                                var mesh = RendererUtility.GetRequiredMesh(entry.GetTargetRenderer(meshiaCascadingMeshSimplifier)!);
+                                var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = entry.TargetTriangleCount };
+                                Mesh simplifiedMesh = new();
+                                parameters.Add((mesh, target, entry.Options, simplifiedMesh));
                             }
                         }
 
@@ -79,37 +80,37 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         {
                             var i = 0;
 
-                            foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
+                            foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
                             {
-                                if (ndmfMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                                if (meshiaMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
                                 {
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
+                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     skinnedMeshRenderer.sharedMesh = simplifiedMesh;
                                 }
-                                if (ndmfMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
+                                if (meshiaMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
                                 {
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
+                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     meshFilter.sharedMesh = simplifiedMesh;
                                 }
 
-                                UnityEngine.Object.DestroyImmediate(ndmfMeshSimplifier);
+                                UnityEngine.Object.DestroyImmediate(meshiaMeshSimplifier);
                             }
 
 #if ENABLE_MODULAR_AVATAR
 
-                            foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
+                            foreach (var meshiaCascadingMeshSimplifier in meshiaCascadingMeshSimplifiers)
                             {
-                                foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
+                                foreach (var cascadingTarget in meshiaCascadingMeshSimplifier.Entries)
                                 {
-                                    if (!cascadingTarget.IsValid(cascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
-                                    var renderer = cascadingTarget.GetTargetRenderer(cascadingMeshSimplifier)!;
+                                    if (!cascadingTarget.IsValid(meshiaCascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
+                                    var renderer = cascadingTarget.GetTargetRenderer(meshiaCascadingMeshSimplifier)!;
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, ctx.AssetContainer);
+                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
-                                    UnityEngine.Object.DestroyImmediate(cascadingMeshSimplifier);
+                                    UnityEngine.Object.DestroyImmediate(meshiaCascadingMeshSimplifier);
                                 }
                             }
 
