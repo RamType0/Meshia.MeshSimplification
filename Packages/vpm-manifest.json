@@ -8,6 +8,9 @@
     },
     "nadena.dev.ndmf": {
       "version": "1.7.9"
+    },
+    "com.vrchat.avatars": {
+      "version": "3.8.1"
     }
   },
   "locked": {
@@ -16,12 +19,18 @@
       "dependencies": {}
     },
     "com.vrchat.base": {
-      "version": "3.8.0",
+      "version": "3.8.1",
       "dependencies": {}
     },
     "nadena.dev.ndmf": {
-      "version": "1.7.9",
+      "version": "1.7.10",
       "dependencies": {}
+    },
+    "com.vrchat.avatars": {
+      "version": "3.8.1",
+      "dependencies": {
+        "com.vrchat.base": "3.8.1"
+      }
     }
   }
 }
