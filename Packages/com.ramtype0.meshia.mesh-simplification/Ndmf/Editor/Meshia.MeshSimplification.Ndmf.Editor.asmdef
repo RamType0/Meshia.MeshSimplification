@@ -17,7 +17,9 @@
         "System.Collections.Immutable.dll"
     ],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "ENABLE_NDMF"
+    ],
     "versionDefines": [
         {
             "name": "nadena.dev.ndmf",
