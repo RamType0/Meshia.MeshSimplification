@@ -1,9 +1,8 @@
 #nullable enable
-#if ENABLE_NDMF
-
 using Meshia.MeshSimplification.Ndmf.Editor;
 using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.preview;
 using System;
 using UnityEditor;
 using UnityEngine;
@@ -20,6 +19,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
         protected override void Configure()
         {
+#if ENABLE_MODULAR_AVATAR
+
             InPhase(BuildPhase.Resolving)
                 .Run("Resolve References", ctx =>
                 {
@@ -29,14 +30,20 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                         cascadingMeshSimplifier.ResolveReferences();
                     }
                 });
-            
+
+#endif
+
             InPhase(BuildPhase.Optimizing)
                 .BeforePlugin("com.anatawa12.avatar-optimizer")
                 .Run("Simplify meshes", ctx =>
                 {
                     var nfmfMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
+#if ENABLE_MODULAR_AVATAR
+
                     var cascadingMeshSimplifiers = ctx.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
-                    using(ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
+#endif
+
+                    using (ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
                     {
                         foreach (var ndmfMeshSimplifier in nfmfMeshSimplifiers)
                         {
@@ -53,6 +60,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 parameters.Add((sourceMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh));
                             }
                         }
+#if ENABLE_MODULAR_AVATAR
+
                         foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                         {
                             foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
@@ -63,6 +72,8 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 parameters.Add((mesh, target, cascadingTarget.Options, mesh));
                             }
                         }
+
+#endif
 
                         MeshSimplifier.SimplifyBatch(parameters);
                         {
@@ -85,6 +96,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                                 UnityEngine.Object.DestroyImmediate(ndmfMeshSimplifier);
                             }
+
+#if ENABLE_MODULAR_AVATAR
+
                             foreach (var cascadingMeshSimplifier in cascadingMeshSimplifiers)
                             {
                                 foreach (var cascadingTarget in cascadingMeshSimplifier.Entries)
@@ -98,12 +112,19 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                     UnityEngine.Object.DestroyImmediate(cascadingMeshSimplifier);
                                 }
                             }
+
+#endif
+
                         }
                     }
-                }).PreviewingWith(new MeshiaMeshSimplifierPreview(), new MeshiaCascadingAvatarMeshSimplifierPreview())
+                }).PreviewingWith(new IRenderFilter[]
+                {
+                    new MeshiaMeshSimplifierPreview(),
+#if ENABLE_MODULAR_AVATAR
+                    new MeshiaCascadingAvatarMeshSimplifierPreview(),
+#endif
+                })
             ;
         }
     }
 }
-
-#endif

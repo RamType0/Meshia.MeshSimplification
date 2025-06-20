@@ -1,4 +1,5 @@
 #nullable enable
+#if ENABLE_MODULAR_AVATAR
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -48,3 +49,5 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
         }
     }
 }
+
+#endif

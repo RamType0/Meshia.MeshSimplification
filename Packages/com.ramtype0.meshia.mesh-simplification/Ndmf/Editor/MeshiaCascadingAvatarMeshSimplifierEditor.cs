@@ -1,4 +1,5 @@
 #nullable enable
+#if ENABLE_MODULAR_AVATAR
 
 using System;
 using System.Linq;
@@ -617,3 +618,5 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
         }
     }
 }
+
+#endif
