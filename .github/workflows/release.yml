@@ -85,3 +85,4 @@ jobs:
             ${{ env.unityPackage }}
             ${{ env.packagePath }}/package.json
           tag_name: ${{ env.version }}
+          prerelease: ${{ contains(env.version, '-') }}
