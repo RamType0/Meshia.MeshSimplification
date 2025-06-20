@@ -202,12 +202,14 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                 var entry = _validEntries[index];
                 var itemRoot = (TemplateContainer)itemElement;
+                var targetObjectField = itemRoot.Q<ObjectField>("TargetObjectField");
                 var targetTriangleCountSlider = itemRoot.Q<SliderInt>("TargetTriangleCountSlider");
                 var originalTriangleCountSlider = itemRoot.Q<SliderInt>("OriginalTriangleCountSlider");
                 var originalTriangleCountField = itemRoot.Q<IntegerField>("OriginalTriangleCountField");
                 itemRoot.BindProperty(entry.property);
                 itemRoot.userData = index;
 
+                targetObjectField.value = entry.Renderer;
 
                 targetTriangleCountSlider.highValue = entry.OriginalTriangleCount;
 
