@@ -52,7 +52,6 @@ namespace Meshia.MeshSimplification.Ndmf
                 {
                     if (childSimplifier != this)
                     {
-
                         var otherScopeOrigin = childSimplifier.transform.parent;
                         if(otherScopeOrigin == myScopeOrigin)
                         {
@@ -63,38 +62,61 @@ namespace Meshia.MeshSimplification.Ndmf
                     }
                 }
 
-                if(otherScopeOrigins.Count == 0)
+                using (ListPool<Renderer>.Get(out var childRenderers))
                 {
-                    myScopeOrigin.gameObject.GetComponentsInChildren(ownedRenderers);
-                }
-                else
-                {
-                    using (ListPool<Renderer>.Get(out var childRenderers))
+                    myScopeOrigin.gameObject.GetComponentsInChildren(childRenderers);
+                    for (int i = 0; i < childRenderers.Count;)
                     {
-                        myScopeOrigin.gameObject.GetComponentsInChildren(childRenderers);
-                        foreach (var childRenderer in childRenderers)
+                        Renderer? childRenderer = childRenderers[i];
+
+                        if (childRenderer is MeshRenderer or SkinnedMeshRenderer)
                         {
-                            var currentTransform = childRenderer.transform;
-                            while (currentTransform != myScopeOrigin)
-                            {
-                                if (otherScopeOrigins.Contains(currentTransform))
-                                {
-                                    goto NextChildRenderer;
-                                }
-                                else
-                                {
-                                    currentTransform = currentTransform.parent;
-                                }
-
-                            }
-
-                            ownedRenderers.Add(childRenderer);
-
-                        NextChildRenderer:;
+                            i++;
+                        }
+                        else
+                        {
+                            childRenderers[i] = childRenderers[^1];
+                            childRenderers.RemoveAt(childRenderers.Count - 1);
                         }
                     }
+                    if (otherScopeOrigins.Count != 0)
+                    {
+                        for (int i = 0; i < childRenderers.Count;)
+                        {
+                            Renderer? childRenderer = childRenderers[i];
+                            if (IsOwnedByThis(childRenderer))
+                            {
+                                i++;
+                            }
+                            else
+                            {
+                                childRenderers[i] = childRenderers[^1];
+                                childRenderers.RemoveAt(childRenderers.Count - 1);
+                            }
+                            bool IsOwnedByThis(Renderer childRenderer)
+                            {
+                                var currentTransform = childRenderer.transform;
+                                while (currentTransform != myScopeOrigin)
+                                {
+                                    if (otherScopeOrigins.Contains(currentTransform))
+                                    {
+                                        return false;
+                                    }
+                                    else
+                                    {
+                                        currentTransform = currentTransform.parent;
+                                    }
+
+                                }
+                                return true;
+                            }
+                        }
+                    }
+                    ownedRenderers.AddRange(childRenderers);
                 }
             }
+
+            
         }
 
         public void ResolveReferences()
@@ -139,12 +161,12 @@ namespace Meshia.MeshSimplification.Ndmf
         {
             var obj = RendererObjectReference.Get(container);
             if (obj == null) return null;
-            return obj.TryGetComponent<Renderer>(out var renderer) ? renderer : null;
+            return obj.TryGetComponent<Renderer>(out var renderer) && renderer is (MeshRenderer or SkinnedMeshRenderer) ? renderer : null;
         }
 
         internal bool IsValid(MeshiaCascadingAvatarMeshSimplifier container) => IsValidTarget(GetTargetRenderer(container));
 
-        private static bool IsEditorOnlyInHierarchy(GameObject gameObject)
+        internal static bool IsEditorOnlyInHierarchy(GameObject gameObject)
         {
             if (gameObject == null) return false;
             Transform current = gameObject.transform;

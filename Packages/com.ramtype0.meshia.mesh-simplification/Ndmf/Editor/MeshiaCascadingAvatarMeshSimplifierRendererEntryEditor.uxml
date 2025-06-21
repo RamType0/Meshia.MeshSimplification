@@ -2,11 +2,13 @@
     <Style src="project://database/Packages/com.ramtype0.meshia.mesh-simplification/Ndmf/Editor/MeshiaCascadingAvatarMeshSimplifierRendererEntryEditor.uss?fileID=7433441132597879392&amp;guid=1e71cbaead4b73f438e66638a2c95bdf&amp;type=3#MeshiaCascadingAvatarMeshSimplifierRendererEntryEditor" />
     <ui:VisualElement name="VisualElement" style="flex-grow: 1; flex-direction: row;">
         <ui:Toggle name="EnabledToggle" binding-path="Enabled" />
-        <uie:ObjectField name="TargetObjectField" style="width: 100px;" />
-        <ui:SliderInt high-value="100000" show-input-field="true" low-value="1" name="TargetTriangleCountSlider" binding-path="TargetTriangleCount" style="flex-grow: 1;" />
-        <ui:SliderInt high-value="100000" show-input-field="true" low-value="1" name="OriginalTriangleCountSlider" style="display: none; flex-grow: 1;" />
-        <ui:Label tabindex="-1" text="/" parse-escape-sequences="true" display-tooltip-when-elided="true" name="OriginalTriangleCountLabel" enable-rich-text="false" style="align-self: center; padding-left: 5px; padding-right: 0;" />
+        <uie:ObjectField name="TargetObjectField" class="editor-only" style="width: 100px;" />
+        <ui:TextField picking-mode="Ignore" readonly="true" name="TargetPathField" class="missing" style="width: 100px; display: none; background-color: rgb(0, 0, 0);" />
+        <ui:SliderInt high-value="100000" low-value="1" name="TargetTriangleCountSlider" binding-path="TargetTriangleCount" style="flex-grow: 1;" />
+        <ui:IntegerField value="42" name="TargetTriangleCountField" binding-path="TargetTriangleCount" style="min-width: 50px;" />
+        <ui:Label tabindex="-1" text="/" parse-escape-sequences="true" display-tooltip-when-elided="true" enable-rich-text="false" name="TriangleCountDivider" style="align-self: center; padding-left: 5px; padding-right: 0;" />
         <ui:IntegerField value="99999" name="OriginalTriangleCountField" readonly="true" style="min-width: 50px;" />
+        <ui:TextField picking-mode="Ignore" value="?" name="UnknownOriginalTriangleCountField" readonly="true" style="min-width: 50px; display: none;" />
         <ui:Toggle name="FixedToggle" binding-path="Fixed" style="align-self: center;" />
         <ui:Toggle name="OptionsToggle" style="align-self: center;" />
     </ui:VisualElement>

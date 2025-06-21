@@ -5,7 +5,8 @@
         "Meshia.MeshSimplification.Runtime",
         "Meshia.MeshSimplification.Ndmf.Runtime",
         "nadena.dev.ndmf",
-        "nadena.dev.ndmf.runtime"
+        "nadena.dev.ndmf.runtime",
+        "nadena.dev.modular-avatar.core"
     ],
     "includePlatforms": [
         "Editor"
