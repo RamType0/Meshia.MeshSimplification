@@ -3,7 +3,15 @@ name: Run Tests
 on:
  workflow_dispatch:
  push:
+   paths-ignore:
+     - '.docfx/**'
+     - '*.md'
+     - '.gitignore'
  pull_request_target:
+   paths-ignore:
+     - '.docfx/**'
+     - '*.md'
+     - '.gitignore'
 
 env:
  PROJECT_DIRECTORY: .
