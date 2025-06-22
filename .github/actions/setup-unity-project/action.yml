@@ -1,4 +1,4 @@
-name: 'Create Unity Project'
+name: 'Setup Unity Project'
 
 inputs:
   unityVersion:
@@ -12,11 +12,11 @@ runs:
   using: 'composite'
   steps:
     # Unityプロジェクトを配置
-    - name: Create directory
+    - name: Create directory if not exists
       if: ${{ inputs.projectDirectory != '' }}
       run: mkdir -p ${{ inputs.projectDirectory }}
       shell: bash
-    - name: Create minimal project contents
+    - name: Create minimal project folders and ProjectVersion.txt
       working-directory: ${{ inputs.projectDirectory }}
       run: |
         mkdir Assets
@@ -25,8 +25,8 @@ runs:
         echo "m_EditorVersion: ${{ inputs.unityVersion }}" > ProjectSettings/ProjectVersion.txt
       shell: bash
     - name: Create manifest.json
-      working-directory: ${{ inputs.projectDirectory }}
+      working-directory: 
       uses: jsdaniell/create-json@v1.2.3
       with: 
-        name: "Packages/manifest.json"
+        name: "${{ inputs.projectDirectory }}/Packages/manifest.json"
         json: ${{ inputs.manifest }}
