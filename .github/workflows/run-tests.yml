@@ -52,6 +52,9 @@ jobs:
      - name: Setup vrc-get
        if: ${{ matrix.vpmPackages }} != ''
        uses: anatawa12/sh-actions/setup-vrc-get@master
+     - name: Add VPM repositories
+       if: ${{ matrix.vpmPackages }} != ''
+       run: vrc-get repo add https://vpm.nadena.dev/vpm.json
      - name: Install VPM packages
        if: ${{ matrix.vpmPackages }} != ''
        working-directory: ${{ env.PROJECT_PATH }}
@@ -65,11 +68,6 @@ jobs:
        shell: bash
        env:
          VPM_PACKAGES: ${{ matrix.vpmPackages }}
-     - name: Resolve VPM packages
-       uses: anatawa12/sh-actions/resolve-vpm-packages@master
-       if: ${{ matrix.vpmPackages }} != ''
-       with:
-         repos: 'https://vpm.nadena.dev/vpm.json'
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
