@@ -21,9 +21,10 @@ jobs:
      matrix:
        unityVersion:
          - 2022.3.22f1
+         - 6000.0.51f1
+         - 6000.1.8f1
        testMode:
          - playmode
-         - editmode
          - standalone
    steps:
      - name: Create package testing project
