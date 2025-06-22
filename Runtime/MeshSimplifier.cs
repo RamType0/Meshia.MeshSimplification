@@ -235,7 +235,7 @@ namespace Meshia.MeshSimplification
             {
                 destination.bounds = source.bounds;
 #if UNITY_2023_1_OR_NEWER
-                var bindposes = mesh.GetBindposes();
+                var bindposes = source.GetBindposes();
                 if (bindposes.Length != 0)
                 {
                     destination.SetBindposes(bindposes);
