@@ -50,7 +50,12 @@ jobs:
        with: 
          projectPath: ${{ env.PROJECT_PATH }}
          unityVersion: ${{ matrix.unityVersion }}
-         manifest: "{}"
+         manifest: |
+            {
+              "dependencies": {
+                "com.unity.testtools.codecoverage": "1.2.6"
+              }
+            }
      - name: Checkout repository
        uses: actions/checkout@v4
        with:
@@ -105,7 +110,7 @@ jobs:
          artifactsPath: ${{ matrix.testMode }}-artifacts
          githubToken: ${{ secrets.GITHUB_TOKEN }}
          checkName: ${{ matrix.testMode }} Test Results
-         coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+my.assembly.*'
+         coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+Meshia.MeshSimplification.*'
          projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
