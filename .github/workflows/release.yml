@@ -33,10 +33,18 @@ jobs:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
     if: needs.config.outputs.config_package == 'true'
     steps:
+      
+      # Setup Unity project
+      - name: Setup Unity project
+        uses: ./github/actions/setup-unity-project
+        with: 
+          unityVersion: 2022.3.22f1
+          manifest: "{}"
 
       # Checkout Local Repository
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+        uses: actions/checkout@v4
+        working-directory: ${{ env.packagePath }}
 
       # Get the Package version based on the package.json file
       - name: Get Version
