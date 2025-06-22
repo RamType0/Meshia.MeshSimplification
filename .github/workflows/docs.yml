@@ -10,7 +10,7 @@ on:
      types: [published, created, edited, unpublished, deleted, released]
 
 env:
-  DOCFX_PROJECT_PATH: Documents~
+  DOCFX_PROJECT_PATH: .docfx
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
