@@ -35,7 +35,7 @@ jobs:
     steps:
       # Create Unity project
       - name: Create Unity project
-        uses: RamType0/create-unity-project@v0.1.0
+        uses: RamType0/create-unity-project@v0.1.1
         with: 
           unityVersion: 2022.3.22f1
           manifest: "{}"

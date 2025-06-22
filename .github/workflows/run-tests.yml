@@ -27,7 +27,7 @@ jobs:
          - standalone
    steps:
      - name: Create package testing project
-       uses: RamType0/create-unity-project@v0.1.0
+       uses: RamType0/create-unity-project@v0.1.1
        with: 
          projectDirectory: ${{ env.PROJECT_DIRECTORY }}
          unityVersion: ${{ matrix.unityVersion }}
