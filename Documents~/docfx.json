@@ -4,7 +4,7 @@
     {
       "src": [
         {
-          "src": "../Packages/com.ramtype0.meshia.mesh-simplification",
+          "src": "../",
           "files": [
             "Runtime/**/*.cs"
           ],
