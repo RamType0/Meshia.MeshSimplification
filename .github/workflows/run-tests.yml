@@ -33,8 +33,9 @@ jobs:
          unityVersion: ${{ matrix.unityVersion }}
          manifest: "{}"
      - name: Checkout repository
-       working-directory: ${{ env.PACKAGE_DIRECTORY }}
        uses: actions/checkout@v4
+       with:
+         path: ${{ env.PACKAGE_DIRECTORY }}
 
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_DIRECTORY }}
@@ -42,17 +43,16 @@ jobs:
 
      - name: Restore LFS cache
        uses: actions/cache@v3
-       working-directory: ${{ env.PACKAGE_DIRECTORY }}
        with:
-         path: ./.git/lfs
+         path: ${{ env.PACKAGE_DIRECTORY }}/.git/lfs
          key: ${{ runner.os }}-lfs-${{ hashFiles('./.lfs-assets-id') }}
 
      - name: Git LFS Pull
+       working-directory: ${{ env.PACKAGE_DIRECTORY }}
        run: |
          git lfs pull
          git add .
          git reset --hard
-       working-directory: ${{ env.PACKAGE_DIRECTORY }}
 
      - uses: actions/cache@v3
        with:

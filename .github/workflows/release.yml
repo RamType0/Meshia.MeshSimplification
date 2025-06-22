@@ -43,8 +43,9 @@ jobs:
 
       # Checkout Local Repository
       - name: Checkout
-        working-directory: ${{ env.packagePath }}
         uses: actions/checkout@v4
+        with: 
+          path: ${{ env.packagePath }}
 
       # Get the Package version based on the package.json file
       - name: Get Version
