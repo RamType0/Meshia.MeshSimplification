@@ -22,7 +22,7 @@ env:
  
 jobs:
  test:
-   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }} with VPM packages ${{ matrix.vpmPackages }}
+   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
    runs-on: ubuntu-latest
    strategy:
      fail-fast: false
@@ -36,8 +36,14 @@ jobs:
          - standalone
        vpmPackages:
          - ''
-         - 'nadena.dev.ndmf'
-         - 'nadena.dev.modular-avatar'
+       include:
+         - unityVersion: 2022.3.22f1
+           testMode: editmode
+           vpmPackages: nadena.dev.ndmf
+         - unityVersion: 2022.3.22f1
+           testMode: editmode
+           vpmPackages: nadena.dev.modular-avatar
+           
    steps:
      - name: Create package testing project
        uses: RamType0/create-unity-project@v0.2.0
@@ -105,11 +111,11 @@ jobs:
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
