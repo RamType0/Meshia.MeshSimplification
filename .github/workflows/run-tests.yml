@@ -75,11 +75,18 @@ jobs:
          json: |
            {
               "dependencies": {
+                "com.vrchat.base": {
+                  "version": "3.7.5"
+                },
                 "com.vrchat.core.vpm-resolver": {
                   "version": "0.1.29"
                 }
               },
               "locked": {
+                "com.vrchat.base": {
+                  "version": "3.7.5",
+                  "dependencies": {}
+                },
                 "com.vrchat.core.vpm-resolver": {
                   "version": "0.1.29",
                   "dependencies": {}
