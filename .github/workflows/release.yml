@@ -49,7 +49,7 @@ jobs:
       # Get the Package version based on the package.json file
       - name: Get Version
         id: version
-        uses: zoexx/github-action-json-file-properties@b9f36ce6ee6fe2680cd3c32b2c62e22eade7e590
+        uses: zoexx/github-action-json-file-properties@1.0.6
         with: 
             file_path: "${{ env.packagePath }}/package.json"
             prop_path: "version"
@@ -80,13 +80,13 @@ jobs:
       # Make a release tag of the version from the package.json file 
       - name: Create Tag
         id: tag_version
-        uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
+        uses: rickstaa/action-create-tag@v1.7.2
         with:
           tag: "${{ env.version }}"
       
       # Publish the Release to GitHub
       - name: Make Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        uses: softprops/action-gh-release@v2.3.2
         with:
           files: |
             ${{ env.zipFile }}
