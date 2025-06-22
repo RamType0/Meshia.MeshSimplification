@@ -27,7 +27,7 @@ jobs:
          - standalone
    steps:
      - name: Setup package testing project
-       uses: ${{ env.PACKAGE_DIRECTORY }}/.github/actions/setup-unity-project
+       uses: ./.github/actions/setup-unity-project
        with: 
          projectDirectory: ${{ env.PROJECT_DIRECTORY }}
          unityVersion: ${{ matrix.unityVersion }}
