@@ -26,18 +26,19 @@ jobs:
          - editmode
          - standalone
    steps:
-     - name: Setup package testing project
-       uses: ./github/actions/setup-unity-project
+     - name: Create package testing project
+       uses: ./github/actions/create-unity-project
        with: 
+         projectDirectory: ${{ env.PROJECT_DIRECTORY }}
          unityVersion: ${{ matrix.unityVersion }}
          manifest: "{}"
      - name: Checkout repository
-       uses: actions/checkout@v4
        working-directory: ${{ env.PACKAGE_DIRECTORY }}
+       uses: actions/checkout@v4
 
      - name: Create LFS file list
-       run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
        working-directory: ${{ env.PACKAGE_DIRECTORY }}
+       run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
 
      - name: Restore LFS cache
        uses: actions/cache@v3
