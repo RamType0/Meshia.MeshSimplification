@@ -22,7 +22,7 @@ env:
  
 jobs:
  test:
-   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
+   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
    runs-on: ubuntu-latest
    strategy:
      fail-fast: false
@@ -69,14 +69,14 @@ jobs:
        with:
          path: ${{ env.PACKAGE_PATH }}
      - name: Setup vrc-get
-       if: ${{ matrix.vpmPackages }} != '[]'
+       if: matrix.vpmPackages[0] != null
        uses: anatawa12/sh-actions/setup-vrc-get@master
      - name: Add VPM repositories
-       if: ${{ matrix.vpmPackages }} != '[]'
+       if: matrix.vpmPackages[0] != null
        run: vrc-get repo add https://vpm.nadena.dev/vpm.json
 
      - name: Install VPM packages
-       if: ${{ matrix.vpmPackages }} != '[]'
+       if: matrix.vpmPackages[0] != null
        working-directory: ${{ env.PROJECT_PATH }}
        run: |
         printf '%s\n' "$VPM_PACKAGES" | while IFS= read -r package; do
@@ -118,18 +118,18 @@ jobs:
          testMode: ${{ matrix.testMode }}
          artifactsPath: ${{ matrix.testMode }}-artifacts
          githubToken: ${{ github.token }}
-         checkName: ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }} Test Results
+         checkName: ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }} Test Results
          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+Meshia.MeshSimplification.*'
          projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
+         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
+         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
