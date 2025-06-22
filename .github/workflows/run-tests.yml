@@ -22,7 +22,7 @@ env:
  
 jobs:
  test:
-   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
+   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }} with VPM packages ${{ matrix.vpmPackages }}
    runs-on: ubuntu-latest
    strategy:
      fail-fast: false
@@ -34,6 +34,10 @@ jobs:
        testMode:
          - playmode
          - standalone
+       vpmPackages:
+         - ''
+         - 'nadena.dev.ndmf'
+         - 'nadena.dev.modular-avatar'
    steps:
      - name: Create package testing project
        uses: RamType0/create-unity-project@v0.2.0
@@ -45,7 +49,27 @@ jobs:
        uses: actions/checkout@v4
        with:
          path: ${{ env.PACKAGE_PATH }}
-
+     - name: Setup vrc-get
+       if: ${{ matrix.vpmPackages }} != ''
+       uses: anatawa12/sh-actions/setup-vrc-get@master
+     - name: Install VPM packages
+       if: ${{ matrix.vpmPackages }} != ''
+       working-directory: ${{ env.PROJECT_PATH }}
+       run: |
+        printf '%s\n' "$VPM_PACKAGES" | while IFS= read -r package; do
+          if [ -n "${package:-}" ]; then
+            echo "installing $package" >&2
+            vrc-get install "$package"
+          fi
+        done
+       shell: bash
+       env:
+         VPM_PACKAGES: ${{ matrix.vpmPackages }}
+     - name: Resolve VPM packages
+       uses: anatawa12/sh-actions/resolve-vpm-packages@master
+       if: ${{ matrix.vpmPackages }} != ''
+       with:
+         repos: 'https://vpm.nadena.dev/vpm.json'
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
