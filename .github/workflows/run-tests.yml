@@ -49,9 +49,11 @@ jobs:
        with: 
          projectPath: ${{ env.PROJECT_PATH }}
          unityVersion: ${{ matrix.unityVersion }}
+         # Until https://github.com/bdunderscore/ndmf/pull/655 is merged into stable version, we need to define Animation module dependency explicitly. 
          manifest: |
             {
               "dependencies": {
+                "com.unity.modules.animation": "1.0.0",
                 "com.unity.testtools.codecoverage": "1.2.6"
               }
             }
