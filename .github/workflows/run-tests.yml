@@ -49,11 +49,15 @@ jobs:
        with: 
          projectPath: ${{ env.PROJECT_PATH }}
          unityVersion: ${{ matrix.unityVersion }}
-         # Until https://github.com/bdunderscore/ndmf/pull/655 is merged into stable version, we need to define Animation module dependency explicitly. 
+         # com.vrchat.base is missing dependency to com.unity.modules.video
+         # com.unity.xr.oculus (Referenced by com.vrchat.base) is missing dependency to com.unity.modules.androidjni
+         # Until https://github.com/bdunderscore/ndmf/pull/655 is merged into stable version, we need to define com.unity.modules.animation dependency explicitly. 
          manifest: |
             {
               "dependencies": {
+                "com.unity.modules.androidjni": "1.0.0",
                 "com.unity.modules.animation": "1.0.0",
+                "com.unity.modules.video": "1.0.0",
                 "com.unity.testtools.codecoverage": "1.2.6"
               }
             }
