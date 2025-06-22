@@ -38,7 +38,9 @@ jobs:
        include:
          - unityVersion: 2022.3.22f1
            testMode: editmode
-           vpmPackages: nadena.dev.ndmf
+           vpmPackages: | 
+             com.vrchat.base
+             nadena.dev.ndmf
          - unityVersion: 2022.3.22f1
            testMode: editmode
            vpmPackages: nadena.dev.modular-avatar
@@ -71,41 +73,6 @@ jobs:
      - name: Add VPM repositories
        if: ${{ matrix.vpmPackages }} != ''
        run: vrc-get repo add https://vpm.nadena.dev/vpm.json
-     - name: Create vpm-manifest.json
-       if: ${{ matrix.vpmPackages }} != ''
-       uses: jsdaniell/create-json@v1.2.3
-       with: 
-         name: "${{ env.PROJECT_PATH }}/Packages/vpm-manifest.json"
-         json: |
-           {
-              "dependencies": {
-                "com.vrchat.base": {
-                  "version": "3.7.5"
-                },
-                "com.vrchat.avatars": {
-                  "version": "3.7.5"
-                },
-                "com.vrchat.core.vpm-resolver": {
-                  "version": "0.1.29"
-                }
-              },
-              "locked": {
-                "com.vrchat.base": {
-                  "version": "3.7.5",
-                  "dependencies": {}
-                },
-                "com.vrchat.avatars": {
-                  "version": "3.7.5",
-                  "dependencies": {
-                    "com.vrchat.base": "3.7.5"
-                  }
-                },
-                "com.vrchat.core.vpm-resolver": {
-                  "version": "0.1.29",
-                  "dependencies": {}
-                }
-              }
-           }
 
      - name: Install VPM packages
        if: ${{ matrix.vpmPackages }} != ''
