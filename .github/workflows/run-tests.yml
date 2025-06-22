@@ -87,7 +87,7 @@ jobs:
         done
        shell: bash
        env:
-         VPM_PACKAGES: ${{ join(matrix.vpmPackages, '\n') }}
+         VPM_PACKAGES: ${{ join(matrix.vpmPackages, fromJSON('"\n"')) }}
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
