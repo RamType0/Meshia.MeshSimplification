@@ -65,6 +65,26 @@ jobs:
      - name: Add VPM repositories
        if: ${{ matrix.vpmPackages }} != ''
        run: vrc-get repo add https://vpm.nadena.dev/vpm.json
+     - name: Create vpm-manifest.json
+       if: ${{ matrix.vpmPackages }} != ''
+       uses: jsdaniell/create-json@v1.2.3
+       with: 
+         name: "${{ env.PROJECT_PATH }}/Packages/vpm-manifest.json"
+         json: |
+           {
+              "dependencies": {
+                "com.vrchat.core.vpm-resolver": {
+                  "version": "0.1.29"
+                }
+              },
+              "locked": {
+                "com.vrchat.core.vpm-resolver": {
+                  "version": "0.1.29",
+                  "dependencies": {}
+                }
+              }
+           }
+
      - name: Install VPM packages
        if: ${{ matrix.vpmPackages }} != ''
        working-directory: ${{ env.PROJECT_PATH }}
