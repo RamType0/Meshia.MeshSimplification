@@ -33,10 +33,18 @@ jobs:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
     if: needs.config.outputs.config_package == 'true'
     steps:
+      # Create Unity project
+      - name: Create Unity project
+        uses: RamType0/create-unity-project@v0.1.2
+        with: 
+          unityVersion: 2022.3.22f1
+          manifest: "{}"
 
       # Checkout Local Repository
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+        uses: actions/checkout@v4
+        with: 
+          path: ${{ env.packagePath }}
 
       # Get the Package version based on the package.json file
       - name: Get Version
