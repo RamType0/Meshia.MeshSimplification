@@ -14,8 +14,8 @@ on:
      - '.gitignore'
 
 env:
- PROJECT_DIRECTORY: .
- PACKAGE_DIRECTORY: ./Packages/${{ vars.PACKAGE_NAME }}
+ PROJECT_PATH: .
+ PACKAGE_PATH: ./Packages/${{ vars.PACKAGE_NAME }}
  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -36,28 +36,28 @@ jobs:
          - standalone
    steps:
      - name: Create package testing project
-       uses: RamType0/create-unity-project@v0.1.2
+       uses: RamType0/create-unity-project@v0.2.0
        with: 
-         projectDirectory: ${{ env.PROJECT_DIRECTORY }}
+         projectPath: ${{ env.PROJECT_PATH }}
          unityVersion: ${{ matrix.unityVersion }}
          manifest: "{}"
      - name: Checkout repository
        uses: actions/checkout@v4
        with:
-         path: ${{ env.PACKAGE_DIRECTORY }}
+         path: ${{ env.PACKAGE_PATH }}
 
      - name: Create LFS file list
-       working-directory: ${{ env.PACKAGE_DIRECTORY }}
+       working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
 
      - name: Restore LFS cache
        uses: actions/cache@v3
        with:
-         path: ${{ env.PACKAGE_DIRECTORY }}/.git/lfs
+         path: ${{ env.PACKAGE_PATH }}/.git/lfs
          key: ${{ runner.os }}-lfs-${{ hashFiles('./.lfs-assets-id') }}
 
      - name: Git LFS Pull
-       working-directory: ${{ env.PACKAGE_DIRECTORY }}
+       working-directory: ${{ env.PACKAGE_PATH }}
        run: |
          git lfs pull
          git add .
@@ -65,8 +65,8 @@ jobs:
 
      - uses: actions/cache@v3
        with:
-         path: ${{ env.PROJECT_DIRECTORY }}/Library
-         key: Library-${{ hashFiles('${{ env.PROJECT_DIRECTORY }}/Assets/**', '${{ env.PROJECT_DIRECTORY }}/Packages/**', '${{ env.PROJECT_DIRECTORY }}/ProjectSettings/**') }}
+         path: ${{ env.PROJECT_PATH }}/Library
+         key: Library-${{ hashFiles('${{ env.PROJECT_PATH }}/Assets/**', '${{ env.PROJECT_PATH }}/Packages/**', '${{ env.PROJECT_PATH }}/ProjectSettings/**') }}
          restore-keys: |
            Library-
 
@@ -78,16 +78,16 @@ jobs:
          githubToken: ${{ secrets.GITHUB_TOKEN }}
          checkName: ${{ matrix.testMode }} Test Results
          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+my.assembly.*'
-         projectPath: ${{ env.PROJECT_DIRECTORY }}
+         projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
          name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
-         path: ${{ env.PROJECT_DIRECTORY }}/${{ steps.tests.outputs.artifactsPath }}
+         path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
          name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}
-         path: ${{ env.PROJECT_DIRECTORY }}/${{ steps.tests.outputs.coveragePath }}
+         path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
