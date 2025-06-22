@@ -22,7 +22,7 @@ env:
  
 jobs:
  test:
-   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
+   name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
    runs-on: ubuntu-latest
    strategy:
      fail-fast: false
@@ -34,16 +34,17 @@ jobs:
          - playmode
          - standalone
        vpmPackages:
-         - ''
+         - []
        include:
          - unityVersion: 2022.3.22f1
            testMode: editmode
-           vpmPackages: | 
-             com.vrchat.base
-             nadena.dev.ndmf
+           vpmPackages: 
+            - com.vrchat.base
+            - nadena.dev.ndmf
          - unityVersion: 2022.3.22f1
            testMode: editmode
-           vpmPackages: nadena.dev.modular-avatar
+           vpmPackages: 
+            - nadena.dev.modular-avatar
            
    steps:
      - name: Create package testing project
@@ -68,14 +69,14 @@ jobs:
        with:
          path: ${{ env.PACKAGE_PATH }}
      - name: Setup vrc-get
-       if: ${{ matrix.vpmPackages }} != ''
+       if: ${{ matrix.vpmPackages }} != '[]'
        uses: anatawa12/sh-actions/setup-vrc-get@master
      - name: Add VPM repositories
-       if: ${{ matrix.vpmPackages }} != ''
+       if: ${{ matrix.vpmPackages }} != '[]'
        run: vrc-get repo add https://vpm.nadena.dev/vpm.json
 
      - name: Install VPM packages
-       if: ${{ matrix.vpmPackages }} != ''
+       if: ${{ matrix.vpmPackages }} != '[]'
        working-directory: ${{ env.PROJECT_PATH }}
        run: |
         printf '%s\n' "$VPM_PACKAGES" | while IFS= read -r package; do
@@ -86,7 +87,7 @@ jobs:
         done
        shell: bash
        env:
-         VPM_PACKAGES: ${{ matrix.vpmPackages }}
+         VPM_PACKAGES: ${{ join(matrix.vpmPackages, '\n') }}
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
@@ -117,18 +118,18 @@ jobs:
          testMode: ${{ matrix.testMode }}
          artifactsPath: ${{ matrix.testMode }}-artifacts
          githubToken: ${{ github.token }}
-         checkName: ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }} Test Results
+         checkName: ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }} Test Results
          coverageOptions: 'generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;assemblyFilters:+Meshia.MeshSimplification.*'
          projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
+         name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
        if: always()
        with:
-         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '' && ' with VPM packages ' || '' }}${{ matrix.vpmPackages }}
+         name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages != '[]' && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
