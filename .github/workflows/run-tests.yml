@@ -72,7 +72,7 @@ jobs:
         printf '%s\n' "$VPM_PACKAGES" | while IFS= read -r package; do
           if [ -n "${package:-}" ]; then
             echo "installing $package" >&2
-            vrc-get install "$package"
+            vrc-get install -y "$package"
           fi
         done
        shell: bash
