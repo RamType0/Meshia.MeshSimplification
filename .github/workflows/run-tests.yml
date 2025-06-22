@@ -26,8 +26,8 @@ jobs:
          - editmode
          - standalone
    steps:
-     - name: Setup package testing project
-       uses: ./.github/actions/setup-unity-project
+     - name: Create package testing project
+       uses: RamType0/create-unity-project@v0.1.0
        with: 
          projectDirectory: ${{ env.PROJECT_DIRECTORY }}
          unityVersion: ${{ matrix.unityVersion }}

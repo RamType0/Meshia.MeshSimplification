@@ -33,9 +33,9 @@ jobs:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
     if: needs.config.outputs.config_package == 'true'
     steps:
-      # Setup Unity project
-      - name: Setup Unity project
-        uses: ./.github/actions/setup-unity-project
+      # Create Unity project
+      - name: Create Unity project
+        uses: RamType0/create-unity-project@v0.1.0
         with: 
           unityVersion: 2022.3.22f1
           manifest: "{}"
