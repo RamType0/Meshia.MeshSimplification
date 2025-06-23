@@ -20,11 +20,11 @@ namespace Meshia.MeshSimplification.Editor.Localization
         };
         public static void LocalizeProperties<T>(VisualElement root)
         {
-            var typeName = typeof(T).Name;
+            var typeName = typeof(T).FullName;
             root.Query().OfType<BindableElement>().Where(bindableElement => !string.IsNullOrEmpty(bindableElement.bindingPath))
                 .ForEach(bindableElement =>
                 {
-                    if (Localization.TryTr($"{typeName}:{bindableElement.bindingPath}:label") is { } translatedLabel)
+                    if (Localization.TryTr($"{typeName}.{bindableElement.bindingPath}.label") is { } translatedLabel)
                     {
                         switch (bindableElement)
                         {
@@ -45,7 +45,7 @@ namespace Meshia.MeshSimplification.Editor.Localization
                                 break;
                         }
                     }
-                    if (Localization.TryTr($"{typeName}:{bindableElement.bindingPath}:tooltip") is { } translatedTooltip)
+                    if (Localization.TryTr($"{typeName}.{bindableElement.bindingPath}.tooltip") is { } translatedTooltip)
                     {
                         bindableElement.tooltip = translatedTooltip;
                     }

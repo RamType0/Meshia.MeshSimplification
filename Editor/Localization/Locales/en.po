@@ -2,16 +2,16 @@ msgid ""
 msgstr ""
 "Language: en\n"
 
-msgid "MeshSimplifierOptions:PreserveBorderEdges:label"
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.label"
 msgstr "Preserve Border Edges"
 
-msgid "MeshSimplifierOptions:PreserveBorderEdges:tooltip"
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.tooltip"
 msgstr "If you want to suppress hole generation during simplification, enable this option."
 
-msgid "MeshSimplifierOptions:PreserveSurfaceCurvature:label"
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
 msgstr "Preserve Surface Curvature"
 
-msgid "MeshSimplifierOptions:EnableSmartLink:label"
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
 msgstr "Enable Smart Link"
 
 msgid "locale:en"
