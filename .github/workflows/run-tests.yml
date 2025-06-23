@@ -23,6 +23,8 @@ env:
 jobs:
  test:
    name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
+   permissions:
+     checks: write
    runs-on: ubuntu-latest
    strategy:
      fail-fast: false
