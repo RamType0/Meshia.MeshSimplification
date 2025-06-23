@@ -4,40 +4,27 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  # Validate Repository Configuration
-  config:
-    runs-on: ubuntu-latest
-    outputs:
-      config_package: ${{ steps.config_package.outputs.configPackage }}
-    steps:
-
-    # Ensure that required repository variable has been created for the Package
-    - name: Validate Package Config
-      id: config_package
-      run: |
-        if [ "${{ vars.PACKAGE_NAME }}" != "" ]; then
-          echo "configPackage=true" >> $GITHUB_OUTPUT;
-        else
-          echo "configPackage=false" >> $GITHUB_OUTPUT;
-        fi
-
   # Build and release the Package
-  # If the repository is not configured properly, this job will be skipped
   build:
-    needs: config
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       packagePath: .
-    if: needs.config.outputs.config_package == 'true'
     steps:
       # Checkout Local Repository
       - name: Checkout
         uses: actions/checkout@v4
         with: 
           path: ${{ env.packagePath }}
+
+      # Get the Package name based on the package.json file
+      - name: Get Package name
+        id: packageName
+        uses: zoexx/github-action-json-file-properties@1.0.6
+        with: 
+            file_path: "${{ env.packagePath }}/package.json"
+            prop_path: "name"
 
       # Get the Package version based on the package.json file
       - name: Get Version
@@ -50,8 +37,8 @@ jobs:
       # Configure the Environment Variables needed for releasing the Package
       - name: Set Environment Variables
         run: |
-          echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}".zip >> $GITHUB_ENV
-          echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
+          echo "zipFile=${{ steps.packageName.outputs.value }}-${{ steps.version.outputs.value }}".zip >> $GITHUB_ENV
+          echo "unityPackage=${{ steps.packageName.outputs.value }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
           echo "version=${{ steps.version.outputs.value }}" >> $GITHUB_ENV
 
       # Zip the Package for release

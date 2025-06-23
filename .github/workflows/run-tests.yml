@@ -15,7 +15,7 @@ on:
 
 env:
  PROJECT_PATH: .
- PACKAGE_PATH: ./Packages/${{ vars.PACKAGE_NAME }}
+ PACKAGE_PATH: ./Packages/${{ github.event.repository.name }}
  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
