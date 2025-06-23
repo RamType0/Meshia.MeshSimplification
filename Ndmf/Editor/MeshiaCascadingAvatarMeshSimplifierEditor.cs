@@ -26,7 +26,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
         Action<bool>? onNdmfPreviewEnabledChanged;
 
 
-        [MenuItem("GameObject/Meshia/Cascading Avatar Mesh Simplifier", false, 0)]
+        [MenuItem("GameObject/Meshia Mesh Simplification/Meshia Cascading Avatar Mesh Simplifier", false, 0)]
         static void AddCascadingAvatarMeshSimplifier()
         {
             var go = new GameObject("Meshia Cascading Avatar Mesh Simplifier");
