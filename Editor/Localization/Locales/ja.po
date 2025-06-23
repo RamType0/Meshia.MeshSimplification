@@ -1,0 +1,18 @@
+msgid ""
+msgstr ""
+"Language: ja\n"
+
+msgid "MeshSimplifierOptions:PreserveBorderEdges:label"
+msgstr "端の露出したポリゴンを保持"
+
+msgid "MeshSimplifierOptions:PreserveBorderEdges:tooltip"
+msgstr "軽量化後のメッシュに穴が目立つとき、有効化してみてください。"
+
+msgid "MeshSimplifierOptions:PreserveSurfaceCurvature:label"
+msgstr "曲面を保持"
+
+msgid "MeshSimplifierOptions:EnableSmartLink:label"
+msgstr "近傍点をマージ候補に含める"
+
+msgid "locale:ja"
+msgstr "日本語"

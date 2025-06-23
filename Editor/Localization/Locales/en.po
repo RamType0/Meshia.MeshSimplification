@@ -1,0 +1,18 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+
+msgid "MeshSimplifierOptions:PreserveBorderEdges:label"
+msgstr "Preserve Border Edges"
+
+msgid "MeshSimplifierOptions:PreserveBorderEdges:tooltip"
+msgstr "If you want to suppress hole generation during simplification, enable this option."
+
+msgid "MeshSimplifierOptions:PreserveSurfaceCurvature:label"
+msgstr "Preserve Surface Curvature"
+
+msgid "MeshSimplifierOptions:EnableSmartLink:label"
+msgstr "Enable Smart Link"
+
+msgid "locale:en"
+msgstr "English"

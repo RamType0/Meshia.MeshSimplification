@@ -1,5 +1,7 @@
 #nullable enable
+using CustomLocalization4EditorExtension;
 using Meshia.MeshSimplification;
+using Meshia.MeshSimplification.Editor.Localization;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -16,7 +18,16 @@ namespace Meshia.MeshSimplification.Editor
             var root = visualTreeAsset.CloneTree();
 
             root.BindProperty(property);
+
+            var languagePicker = LocalizationProvider.CreateLanguagePicker();
+            root.Q<VisualElement>("LanguagePickerContainer").Add(languagePicker);
+
+            languagePicker.RegisterValueChangedCallback(evt =>
+            {
+                LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
+            });
             var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
+            LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
             resetOptionsButton.clicked += () =>
             {
                 property.boxedValue = MeshSimplifierOptions.Default;
