@@ -16,7 +16,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
     internal class MeshiaCascadingAvatarMeshSimplifierEditor : UnityEditor.Editor
     {
         [SerializeField] VisualTreeAsset editorVisualTreeAsset = null!;
-        [SerializeField] VisualTreeAsset entryEditorVisualTreeAsset;
+        [SerializeField] VisualTreeAsset entryEditorVisualTreeAsset = null!;
         private MeshiaCascadingAvatarMeshSimplifier Target => (MeshiaCascadingAvatarMeshSimplifier)target;
 
         private SerializedProperty AutoAdjustEnabledProperty => serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.AutoAdjustEnabled));
