@@ -13,11 +13,6 @@ namespace Meshia.MeshSimplification.Editor.Localization
 
         [AssemblyCL4EELocalization]
         public static Localization Localization { get; } = new("ca7beb49d3e85244e803080472c014c2", DefaultLocale);
-        static Dictionary<string, string> LocaleCodeToName { get; } = new()
-        {
-            { "en", "English" },
-            { "ja", "“ú–{Œê" }
-        };
         public static void LocalizeProperties<T>(VisualElement root)
         {
             var typeName = typeof(T).FullName;
