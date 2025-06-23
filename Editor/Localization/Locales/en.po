@@ -1,0 +1,63 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.label"
+msgstr "Preserve Border Edges"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.tooltip"
+msgstr "If you want to suppress hole generation during simplification, enable this option."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
+msgstr "Preserve Surface Curvature"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.tooltip"
+msgstr "Change the cost formula to preserve gently curved surfaces."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.label"
+msgstr "Use Barycentric Coordinate Interpolation"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.tooltip"
+msgstr "If you find that the texture is distorted, try toggling this option."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.label"
+msgstr "Min Normal Dot"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.tooltip"
+msgstr "Specifies how much normal misalignment to allow when generating lightweight polygons.For example, cos90°=0 allows up to 90° displacement, and cos180°=-1 allows up to 180° displacement."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
+msgstr "Enable Smart Link"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.tooltip"
+msgstr "If this option is enabled, vertices that are not originally connected but are close to each other will be included in the first merge candidates. Increases the initialization cost."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions"
+msgstr "Smart Link Options"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkDistance.label"
+msgstr "Vertex Link Distance"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkDistance.tooltip"
+msgstr "When smart link is enabled, this is used to select candidates for merging vertices that are not originally connected to each other. Increasing this value also increases the initialization cost."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkColorDistance.label"
+msgstr "Vertex Link Color Distance"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkColorDistance.tooltip"
+msgstr "Larger values may improve the shape of the polygons after lightening, but at the cost of unnatural vertex colors."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.label"
+msgstr "Vertex Link UV Distance"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.tooltip"
+msgstr "Larger values may improve the shape of the polygons after lightening, but at the cost of making the UVs unnatural."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.label"
+msgstr "Vertex Link Min Normal Dot"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.tooltip"
+msgstr "Use different min normal dot for smart link. The more stringent of the two is used for smart link."
+
+msgid "locale:en"
+msgstr "English"

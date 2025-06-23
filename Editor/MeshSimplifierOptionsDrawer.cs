@@ -1,5 +1,7 @@
 #nullable enable
+using CustomLocalization4EditorExtension;
 using Meshia.MeshSimplification;
+using Meshia.MeshSimplification.Editor.Localization;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -16,10 +18,31 @@ namespace Meshia.MeshSimplification.Editor
             var root = visualTreeAsset.CloneTree();
 
             root.BindProperty(property);
-            var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
+
+            var languagePicker = root.Q<DropdownField>("LanguagePicker");
 
             var enableSmartLinkToggle = root.Q<Toggle>("EnableSmartLinkToggle");
             var smartLinkOptionsGroup = root.Q<GroupBox>("SmartLinkOptionsGroup");
+
+            var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
+
+            LocalizationProvider.LocalizeBindedElements<MeshSimplifierOptions>(root);
+            smartLinkOptionsGroup.text = LocalizationProvider.Localization.Tr("Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions");
+
+            LocalizationProvider.MountLanguagePicker(languagePicker);
+
+            languagePicker.RegisterValueChangedCallback(evt =>
+            {
+                LocalizationProvider.LocalizeBindedElements<MeshSimplifierOptions>(root);
+                smartLinkOptionsGroup.text = LocalizationProvider.Localization.Tr("Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions");
+            });
+
+            enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
+            {
+                smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+
+            });
+
 
             resetOptionsButton.clicked += () =>
             {
@@ -27,11 +50,7 @@ namespace Meshia.MeshSimplification.Editor
                 property.serializedObject.ApplyModifiedProperties();
             };
 
-            enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
-            {
-                smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
-
-            });
+            
 
 
             return root;

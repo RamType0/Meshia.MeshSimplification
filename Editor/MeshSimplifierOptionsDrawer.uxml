@@ -1,4 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:DropdownField label="Language" name="LanguagePicker" />
     <ui:Toggle label="Preserve Border Edges" binding-path="PreserveBorderEdges" />
     <ui:Toggle label="Preserve Surface Curvature" binding-path="PreserveSurfaceCurvature" />
     <ui:Toggle label="Use Barycentric Coordinate Interpolation" binding-path="UseBarycentricCoordinateInterpolation" />
