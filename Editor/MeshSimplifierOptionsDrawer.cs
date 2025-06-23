@@ -28,11 +28,23 @@ namespace Meshia.MeshSimplification.Editor
             });
             var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
             LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
+
+            var enableSmartLinkToggle = root.Q<Toggle>("EnableSmartLinkToggle");
+            var smartLinkOptionsGroup = root.Q<GroupBox>("SmartLinkOptionsGroup");
+
             resetOptionsButton.clicked += () =>
             {
                 property.boxedValue = MeshSimplifierOptions.Default;
                 property.serializedObject.ApplyModifiedProperties();
             };
+
+            enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
+            {
+                smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+
+            });
+
+
             return root;
         }
     }
