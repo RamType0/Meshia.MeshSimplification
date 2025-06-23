@@ -13,6 +13,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
+    [AddComponentMenu("Meshia Mesh Simplification/Meshia Cascading Avatar Mesh Simplifier")]
     public class MeshiaCascadingAvatarMeshSimplifier : MonoBehaviour
 #if ENABLE_VRCHAT_BASE
     , VRC.SDKBase.IEditorOnly
