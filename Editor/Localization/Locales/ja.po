@@ -11,6 +11,9 @@ msgstr "軽量化後のメッシュに穴が目立つとき、有効化してみ
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
 msgstr "曲面を保持"
 
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.tooltip"
+msgstr "なだらかな曲面を保持するようにコスト計算式を変更します。"
+
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.label"
 msgstr "重心座標系補間を使用する"
 
@@ -24,7 +27,37 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.tooltip"
 msgstr "頂点を削減して軽量化されたポリゴンを生成する際、どこまで法線方向のズレを許容するかを指定します。たとえばcos90°=0を指定すると90°までのズレを許容し、cos180°=-1を指定することで180°までのズレを許容します。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
-msgstr "近傍点をマージ候補に含める"
+msgstr "近傍頂点をマージ候補に含める"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.tooltip"
+msgstr "元々同一ポリゴンに含まれる頂点同士に加え、近傍頂点同士を初期のマージ候補に加えます。"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions"
+msgstr "近傍頂点マージオプション"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkDistance.label"
+msgstr "近傍頂点マージ距離"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkDistance.tooltip"
+msgstr "この距離より近い頂点同士が近傍頂点とみなされ、マージ候補に加えられます。大きな値を設定すると、処理時間が伸びる場合があります。"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkColorDistance.label"
+msgstr "近傍頂点マージ頂点カラー距離"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkColorDistance.tooltip"
+msgstr "大きな値を設定するほど軽量化後のポリゴンの形状が改善される場合がありますが、その代わりに頂点カラーが不自然になる場合があります。"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.label"
+msgstr "近傍頂点マージ頂点UV距離"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.tooltip"
+msgstr "大きな値を設定するほど軽量化後のポリゴンの形状が改善される場合がありますが、その代わりにUVが不自然になる場合があります。"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.label"
+msgstr "近傍頂点マージ許容最小法線ドット積"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.tooltip"
+msgstr "近傍頂点マージ時に異なる許容最小法線ドット積を使用します。2つのうち、より厳しいほうが近傍頂点マージ時に使用されます。"
 
 msgid "locale:ja"
 msgstr "日本語"

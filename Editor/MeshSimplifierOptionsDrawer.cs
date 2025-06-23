@@ -26,13 +26,15 @@ namespace Meshia.MeshSimplification.Editor
 
             var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
 
-            LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
+            LocalizationProvider.LocalizeBindedElements<MeshSimplifierOptions>(root);
+            smartLinkOptionsGroup.text = LocalizationProvider.Localization.Tr("Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions");
 
             LocalizationProvider.MountLanguagePicker(languagePicker);
 
             languagePicker.RegisterValueChangedCallback(evt =>
             {
-                LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
+                LocalizationProvider.LocalizeBindedElements<MeshSimplifierOptions>(root);
+                smartLinkOptionsGroup.text = LocalizationProvider.Localization.Tr("Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions");
             });
 
             enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
@@ -40,6 +42,7 @@ namespace Meshia.MeshSimplification.Editor
                 smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
 
             });
+
 
             resetOptionsButton.clicked += () =>
             {
