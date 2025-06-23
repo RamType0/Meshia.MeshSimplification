@@ -23,8 +23,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
         private SerializedProperty TargetTriangleCountProperty => serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.TargetTriangleCount));
         private SerializedProperty EntriesProperty => serializedObject.FindProperty(nameof(MeshiaCascadingAvatarMeshSimplifier.Entries));
 
-        Action<bool>? onNdmfPreviewEnabledChanged;
-
 
         [MenuItem("GameObject/Meshia Mesh Simplification/Meshia Cascading Avatar Mesh Simplifier", false, 0)]
         static void AddCascadingAvatarMeshSimplifier()
@@ -37,15 +35,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
         private void OnEnable()
         {
             RefreshEntries();
-        }
-
-        private void OnDisable()
-        {
-            if(onNdmfPreviewEnabledChanged != null)
-            {
-                MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.OnChange -= onNdmfPreviewEnabledChanged;
-                onNdmfPreviewEnabledChanged = null;
-            }
         }
 
         private void RefreshEntries()
@@ -84,8 +73,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
             var targetTriangleCountPresetDropdownField = root.Q<DropdownField>("TargetTriangleCountPresetDropdownField");
             var adjustButton = root.Q<Button>("AdjustButton");
             var autoAdjustEnabledToggle = root.Q<Toggle>("AutoAdjustEnabledToggle");
-
-
             var triangleCountLabel = root.Q<IMGUIContainer>("TriangleCountLabel");
 
             var removeInvalidEntriesButton = root.Q<Button>("RemoveInvalidEntriesButton");
@@ -102,7 +89,6 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 {
                     name = "Custom";
                 }
-
                 targetTriangleCountPresetDropdownField.SetValueWithoutNotify(name);
                 if (AutoAdjustEnabledProperty.boolValue)
                 {
@@ -287,18 +273,22 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 
                 return itemRoot;
             };
+
+            ndmfPreviewToggle.SetValueWithoutNotify(MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.Value);
             ndmfPreviewToggle.RegisterValueChangedCallback(changeEvent =>
             {
                 MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.Value = changeEvent.newValue;
             });
 
-            ndmfPreviewToggle.SetValueWithoutNotify(MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.Value);
-            onNdmfPreviewEnabledChanged = (newValue) =>
+            Action<bool> onNdmfPreviewEnabledChanged = (newValue) =>
             {
                 ndmfPreviewToggle.SetValueWithoutNotify(newValue);
             };
             MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.OnChange += onNdmfPreviewEnabledChanged;
-
+            ndmfPreviewToggle.RegisterCallback<DetachFromPanelEvent>(detachFromPanelEvent =>
+            {
+                MeshiaCascadingAvatarMeshSimplifierPreview.PreviewControlNode.IsEnabled.OnChange -= onNdmfPreviewEnabledChanged;
+            });
 
 
             return root;
