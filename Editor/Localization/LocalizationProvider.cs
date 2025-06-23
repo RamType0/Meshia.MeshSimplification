@@ -18,7 +18,6 @@ namespace Meshia.MeshSimplification.Editor.Localization
             { "en", "English" },
             { "ja", "“ú–{Œê" }
         };
-        static Dictionary<string, string> LocaleNameToCode { get; } = LocaleCodeToName.ToDictionary(keyValue => keyValue.Value, keyValue => keyValue.Key);
         public static void LocalizeProperties<T>(VisualElement root)
         {
             var typeName = typeof(T).Name;
@@ -54,11 +53,11 @@ namespace Meshia.MeshSimplification.Editor.Localization
         }
         public static DropdownField CreateLanguagePicker()
         {
-            var choices = LocaleNameToCode.Keys.OrderBy(name => name).ToList();
-            DropdownField languagePicker = new(choices, LocaleCodeToName[Localization.CurrentLocaleCode ?? DefaultLocale]);
+            var choices = LocaleCodeToName.Keys.OrderBy(localeCode => localeCode).ToList();
+            DropdownField languagePicker = new(choices, Localization.CurrentLocaleCode ?? DefaultLocale, localeCode => LocaleCodeToName[localeCode], localeCode => LocaleCodeToName[localeCode]);
             languagePicker.RegisterValueChangedCallback(changeEvent =>
             {
-                Localization.CurrentLocaleCode = LocaleNameToCode[changeEvent.newValue];
+                Localization.CurrentLocaleCode = changeEvent.newValue;
             });
             return languagePicker;
         }
