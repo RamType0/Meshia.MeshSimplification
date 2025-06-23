@@ -16,6 +16,12 @@ namespace Meshia.MeshSimplification.Editor
             var root = visualTreeAsset.CloneTree();
 
             root.BindProperty(property);
+            var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
+            resetOptionsButton.clicked += () =>
+            {
+                property.boxedValue = MeshSimplifierOptions.Default;
+                property.serializedObject.ApplyModifiedProperties();
+            };
             return root;
         }
     }
