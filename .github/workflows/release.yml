@@ -30,16 +30,9 @@ jobs:
     permissions:
       contents: write
     env:
-      packagePath: Packages/${{ vars.PACKAGE_NAME }}
+      packagePath: .
     if: needs.config.outputs.config_package == 'true'
     steps:
-      # Create Unity project
-      - name: Create Unity project
-        uses: RamType0/create-unity-project@v0.2.0
-        with: 
-          unityVersion: 2022.3.22f1
-          manifest: "{}"
-
       # Checkout Local Repository
       - name: Checkout
         uses: actions/checkout@v4
