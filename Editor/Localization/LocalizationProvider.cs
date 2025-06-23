@@ -51,15 +51,18 @@ namespace Meshia.MeshSimplification.Editor.Localization
                     }
                 });
         }
-        public static DropdownField CreateLanguagePicker()
+        public static void MountLanguagePicker(DropdownField languagePicker)
         {
-            var choices = LocaleCodeToName.Keys.OrderBy(localeCode => localeCode).ToList();
-            DropdownField languagePicker = new(choices, Localization.CurrentLocaleCode ?? DefaultLocale, localeCode => LocaleCodeToName[localeCode], localeCode => LocaleCodeToName[localeCode]);
+            var choices = Localization.LocalizationByIsoCode.Keys.ToList();
+            languagePicker.choices = choices;
+            languagePicker.index = choices.IndexOf(Localization.CurrentLocaleCode);
+            Func<string, string?> localeCodeToName = localeCode => localeCode is not null && Localization.LocalizationByIsoCode.TryGetValue(localeCode, out var locale) ? locale.Name : null;
+            languagePicker.formatListItemCallback = localeCodeToName;
+            languagePicker.formatSelectedValueCallback = localeCodeToName;
             languagePicker.RegisterValueChangedCallback(changeEvent =>
             {
                 Localization.CurrentLocaleCode = changeEvent.newValue;
             });
-            return languagePicker;
         }
     }
 

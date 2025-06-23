@@ -19,18 +19,27 @@ namespace Meshia.MeshSimplification.Editor
 
             root.BindProperty(property);
 
-            var languagePicker = LocalizationProvider.CreateLanguagePicker();
-            root.Q<VisualElement>("LanguagePickerContainer").Add(languagePicker);
+            var languagePicker = root.Q<DropdownField>("LanguagePicker");
+
+            var enableSmartLinkToggle = root.Q<Toggle>("EnableSmartLinkToggle");
+            var smartLinkOptionsGroup = root.Q<GroupBox>("SmartLinkOptionsGroup");
+
+            var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
+
+            LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
+
+            LocalizationProvider.MountLanguagePicker(languagePicker);
 
             languagePicker.RegisterValueChangedCallback(evt =>
             {
                 LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
             });
-            var resetOptionsButton = root.Q<Button>("ResetOptionsButton");
-            LocalizationProvider.LocalizeProperties<MeshSimplifierOptions>(root);
 
-            var enableSmartLinkToggle = root.Q<Toggle>("EnableSmartLinkToggle");
-            var smartLinkOptionsGroup = root.Q<GroupBox>("SmartLinkOptionsGroup");
+            enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
+            {
+                smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+
+            });
 
             resetOptionsButton.clicked += () =>
             {
@@ -38,11 +47,7 @@ namespace Meshia.MeshSimplification.Editor
                 property.serializedObject.ApplyModifiedProperties();
             };
 
-            enableSmartLinkToggle.RegisterValueChangedCallback(changeEvent =>
-            {
-                smartLinkOptionsGroup.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
-
-            });
+            
 
 
             return root;
