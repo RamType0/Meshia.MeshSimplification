@@ -70,6 +70,7 @@ jobs:
        uses: actions/checkout@v4
        with:
          path: ${{ env.PACKAGE_PATH }}
+         submodules: recursive
      - name: Setup vrc-get
        if: matrix.vpmPackages[0] != null
        uses: anatawa12/sh-actions/setup-vrc-get@master
