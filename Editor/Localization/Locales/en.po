@@ -11,6 +11,18 @@ msgstr "If you want to suppress hole generation during simplification, enable th
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
 msgstr "Preserve Surface Curvature"
 
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.label"
+msgstr "Use Barycentric Coordinate Interpolation"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.tooltip"
+msgstr "If you find that the texture is distorted, try toggling this option."
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.label"
+msgstr "Min Normal Dot"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.tooltip"
+msgstr "Specifies how much normal misalignment to allow when generating lightweight polygons.For example, cos90°=0 allows up to 90° displacement, and cos180°=-1 allows up to 180° displacement."
+
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
 msgstr "Enable Smart Link"
 

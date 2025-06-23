@@ -11,6 +11,18 @@ msgstr "軽量化後のメッシュに穴が目立つとき、有効化してみ
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
 msgstr "曲面を保持"
 
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.label"
+msgstr "重心座標系補間を使用する"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.tooltip"
+msgstr "UVなどの補間に線形補間の代わりに重心座標系補間を用います。UVの歪みが目立つとき、切り替えてみてください。"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.label"
+msgstr "許容最小法線ドット積"
+
+msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.tooltip"
+msgstr "頂点を削減して軽量化されたポリゴンを生成する際、どこまで法線方向のズレを許容するかを指定します。たとえばcos90°=0を指定すると90°までのズレを許容し、cos180°=-1を指定することで180°までのズレを許容します。"
+
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
 msgstr "近傍点をマージ候補に含める"
 
