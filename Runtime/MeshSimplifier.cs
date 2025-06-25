@@ -226,7 +226,17 @@ namespace Meshia.MeshSimplification
         {
             Mesh.ApplyAndDisposeWritableMeshData(simplifiedMeshDataArray, destination, MeshUpdateFlags.DontValidateIndices);
             CopyBoundsAndBindposes(mesh, destination);
-            BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
+
+            // https://github.com/RamType0/Meshia.MeshSimplification/issues/23
+            // Setting blend shapes on a mesh with no vertices possibly causes crash.
+            if (destination.vertexCount != 0)
+            {
+                BlendShapeData.SetBlendShapes(destination, simplifiedBlendShapes);
+            }
+            else
+            {
+                destination.ClearBlendShapes();
+            }
         }
 
         private static void CopyBoundsAndBindposes(Mesh source, Mesh destination)

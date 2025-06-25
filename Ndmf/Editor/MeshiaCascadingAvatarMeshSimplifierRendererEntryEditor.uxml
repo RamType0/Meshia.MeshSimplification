@@ -4,7 +4,7 @@
         <ui:Toggle name="EnabledToggle" binding-path="Enabled" />
         <uie:ObjectField name="TargetObjectField" class="editor-only" style="width: 100px;" />
         <ui:TextField picking-mode="Ignore" readonly="true" name="TargetPathField" class="missing" style="width: 100px; display: none; background-color: rgb(0, 0, 0);" />
-        <ui:SliderInt high-value="100000" low-value="1" name="TargetTriangleCountSlider" binding-path="TargetTriangleCount" style="flex-grow: 1;" />
+        <ui:SliderInt high-value="100000" low-value="0" name="TargetTriangleCountSlider" binding-path="TargetTriangleCount" style="flex-grow: 1;" />
         <ui:IntegerField value="42" name="TargetTriangleCountField" binding-path="TargetTriangleCount" style="min-width: 50px;" />
         <ui:Label tabindex="-1" text="/" parse-escape-sequences="true" display-tooltip-when-elided="true" enable-rich-text="false" name="TriangleCountDivider" style="align-self: center; padding-left: 5px; padding-right: 0;" />
         <ui:IntegerField value="99999" name="OriginalTriangleCountField" readonly="true" style="min-width: 50px;" />
