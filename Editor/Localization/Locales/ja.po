@@ -6,7 +6,9 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.label
 msgstr "メッシュ外周の辺を保持"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.tooltip"
-msgstr "軽量化後のメッシュに穴が目立つ場合、このオプションを有効にしてみてください。"
+msgstr ""
+"他の面に接していない辺(穴や切れ目の縁など)を削除しないようにします。\n"
+"軽量化後のメッシュに穴が目立つ場合、このオプションを有効にしてみてください。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
 msgstr "曲面を保持"
