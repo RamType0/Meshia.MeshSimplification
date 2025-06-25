@@ -21,7 +21,7 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateI
 msgstr "UVなどの補間において、線形補間の代わりに重心座標系補間を用います。UVの歪みが目立つ場合、このオプションを切り替えてみてください。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.label"
-msgstr "許容法線最小角度誤差(cosθ)"
+msgstr "許容法線角度誤差(cosθ)"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.MinNormalDot.tooltip"
 msgstr ""
@@ -59,7 +59,7 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.tool
 msgstr "大きな値を設定すると軽量化後のポリゴンの形状が改善されることがありますが、代わりにUVが不自然になる場合があります。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.label"
-msgstr "許容法線最小角度誤差(cosθ)"
+msgstr "許容法線角度誤差(cosθ)"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.tooltip"
 msgstr "SmartLink処理時に、通常と異なる許容法線最小角度誤差を指定できます。2つのうち、厳しい方の値が適用されます。"
