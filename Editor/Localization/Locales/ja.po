@@ -3,7 +3,7 @@ msgstr ""
 "Language: ja\n"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.label"
-msgstr "メッシュ外周の辺を保持"
+msgstr "メッシュの端の辺を保持"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveBorderEdges.tooltip"
 msgstr ""
