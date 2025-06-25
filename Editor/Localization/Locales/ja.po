@@ -29,7 +29,7 @@ msgstr ""
 "0(=cos90°)を指定すると90°までのズレを、-1(=cos180°)を指定すると180°までのズレを許容します。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.label"
-msgstr "近くの頂点同士をマージ候補に含める(Smart Link)"
+msgstr "近くの頂点同士をマージ候補に含める(SmartLink)"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.tooltip"
 msgstr "同一のポリゴンに含まれている頂点に加えて、近くにある頂点同士も初期のマージ候補に含めるようにします。"
@@ -59,10 +59,10 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkUvDistance.tool
 msgstr "大きな値を設定すると軽量化後のポリゴンの形状が改善されることがありますが、代わりにUVが不自然になる場合があります。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.label"
-msgstr "許容法線角度誤差(cosθ)"
+msgstr "法線角度の許容誤差(cosθ)"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkMinNormalDot.tooltip"
-msgstr "SmartLink処理時に、通常と異なる許容法線最小角度誤差を指定できます。2つのうち、厳しい方の値が適用されます。"
+msgstr "SmartLink処理時に、通常と異なる許容誤差を指定できます。2つのうち、厳しい方の値が適用されます。"
 
 msgid "locale:ja"
 msgstr "日本語"
