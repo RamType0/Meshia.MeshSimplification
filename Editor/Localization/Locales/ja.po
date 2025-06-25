@@ -35,7 +35,7 @@ msgid "Meshia.MeshSimplification.MeshSimplifierOptions.EnableSmartLink.tooltip"
 msgstr "同一のポリゴンに含まれている頂点に加えて、近くにある頂点も初めの統合候補に含めるようにします。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions"
-msgstr "Smart Linkのオプション"
+msgstr "SmartLink設定"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.VertexLinkDistance.label"
 msgstr "統合候補に含める頂点の距離"
