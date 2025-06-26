@@ -11,10 +11,10 @@ msgstr ""
 "軽量化後のメッシュに穴が目立つ場合、このオプションを有効にしてみてください。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.label"
-msgstr "曲面を保持"
+msgstr "なだらかな曲面を保持"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.PreserveSurfaceCurvature.tooltip"
-msgstr "なだらかな曲面を維持するような計算式に変更します。"
+msgstr "なだらかな曲面を保持する処理を用いるようにしますが、結果が悪化する場合もあります。"
 
 msgid "Meshia.MeshSimplification.MeshSimplifierOptions.UseBarycentricCoordinateInterpolation.label"
 msgstr "重心座標系補間を使用する"
