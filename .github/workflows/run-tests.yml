@@ -66,20 +66,20 @@ jobs:
                 "com.unity.testtools.codecoverage": "1.2.6"
               }
             }
+            
      - name: Checkout repository
        uses: actions/checkout@v4
        with:
          path: ${{ env.PACKAGE_PATH }}
          submodules: recursive
+         
      - name: Setup vrc-get
-       if: matrix.vpmPackages[0] != null
        uses: anatawa12/sh-actions/setup-vrc-get@master
+       
      - name: Add VPM repositories
-       if: matrix.vpmPackages[0] != null
-       run: vrc-get repo add https://vpm.nadena.dev/vpm.json
-
+       run: vrc-get repo add https://ramtype0.github.io/VpmRepository/index.json
+       
      - name: Install VPM packages
-       if: matrix.vpmPackages[0] != null
        working-directory: ${{ env.PROJECT_PATH }}
        run: |
         printf '%s\n' "$VPM_PACKAGES" | while IFS= read -r package; do
@@ -91,6 +91,10 @@ jobs:
        shell: bash
        env:
          VPM_PACKAGES: ${{ join(matrix.vpmPackages, fromJSON('"\n"')) }}
+         
+     - name: Resolve VPM packages
+       run: vrc-get resolve
+       
      - name: Create LFS file list
        working-directory: ${{ env.PACKAGE_PATH }}
        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
