@@ -4,7 +4,8 @@
     "references": [
         "Unity.Burst",
         "Unity.Mathematics",
-        "Unity.Collections"
+        "Unity.Collections",
+        "com.anatawa12.custom-localization-for-editor-extension.runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
