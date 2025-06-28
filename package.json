@@ -3,12 +3,18 @@
   "displayName": "Meshia Mesh Simplification",
   "version": "3.0.0-pre.8",
   "unity": "2022.3",
-  "description": "Burst accelerated mesh simplification",
+  "description": "Burst accelerated mesh simplification.",
   "vrchatVersion": "2022.1.1",
   "author": {
     "name": "Ram.Type-0",
     "url": "https://github.com/RamType0"
   },
+  "keywords": [
+    "mesh",
+    "optimization",
+    "ndmf",
+    "vrchat"
+  ],
   "dependencies": {
     "com.unity.burst": "1.8.21",
     "com.unity.collections": "2.5.7",
