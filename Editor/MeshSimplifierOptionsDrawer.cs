@@ -29,7 +29,7 @@ namespace Meshia.MeshSimplification.Editor
             LocalizationProvider.LocalizeBindedElements<MeshSimplifierOptions>(root);
             smartLinkOptionsGroup.text = LocalizationProvider.Localization.Tr("Meshia.MeshSimplification.MeshSimplifierOptions.SmartLinkOptions");
 
-            LocalizationProvider.MountLanguagePicker(languagePicker);
+            LocalizationProvider.Localization.MountLanguagePicker(languagePicker);
 
             languagePicker.RegisterValueChangedCallback(evt =>
             {
