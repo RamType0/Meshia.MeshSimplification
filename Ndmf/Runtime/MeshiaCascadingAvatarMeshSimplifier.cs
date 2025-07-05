@@ -21,7 +21,7 @@ namespace Meshia.MeshSimplification.Ndmf
     {
         public List<MeshiaCascadingAvatarMeshSimplifierRendererEntry> Entries = new();
         public int TargetTriangleCount = 70000;
-        public bool AutoAdjustEnabled = false;
+        public bool AutoAdjustEnabled = true;
 
         public void RefreshEntries()
         {
