@@ -1,7 +1,7 @@
 {
   "name": "com.ramtype0.meshia.mesh-simplification",
   "displayName": "Meshia Mesh Simplification",
-  "version": "3.0.0-pre.12",
+  "version": "3.0.0-pre.13",
   "unity": "2022.3",
   "description": "Burst accelerated mesh simplification.",
   "vrchatVersion": "2022.1.1",
