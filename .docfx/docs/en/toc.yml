@@ -1,4 +1,8 @@
 - name: Introduction
   href: introduction.md
-- name: Getting Started
-  href: getting-started.md
+- name: Installation
+  href: installation.md
+- name: VRChat
+  href: vrchat/toc.yml
+- name: C# API
+  href: csharp-api/toc.yml

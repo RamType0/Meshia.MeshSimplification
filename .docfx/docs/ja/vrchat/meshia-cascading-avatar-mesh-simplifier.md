@@ -10,7 +10,7 @@
 
 3. 見た目を確認しながらポリゴン数の配分、オプションなどを調整してください。
 
-![オプション](~/images/simplifier-options.png)
+![オプション](~/images/simplifier-options-ja.png)
 
 > [!TIP]
 > 特に重要なオプションがあります。

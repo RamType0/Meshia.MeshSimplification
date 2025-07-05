@@ -6,6 +6,6 @@ VRChat向けの機能として、Meshia Mesh Simplifierと Meshia Cascading Avat
 
 [ModularAvatar](https://modular-avatar.nadena.dev/ja)をインストールしてください。
 
-# ワールド改変向けに`MeshiaMeshSimplifier`を使いたい
+# ワールド改変向けにMeshia Mesh Simplifierを使いたい
 
 NDMFをインストールする必要があります。ALCOMやVCCなどから最新のNDMFをインストールしてください。

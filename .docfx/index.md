@@ -31,7 +31,7 @@ Attach `MeshiaMeshSimplifier` to your models.
 You can preview the result in EditMode.
 
 
-#### Call from C#
+#### Use from C#
 
 ```csharp
 
