@@ -20,7 +20,7 @@
 > If you get holes in your fingertips, try activating it.
 > - Disabled
 > 
-> ![Disabled]](~/images/preserve-border-edges-disabled.png)
+> ![Disabled](~/images/preserve-border-edges-disabled.png)
 > - Enabled
 > 
 > ![Enabled](~/images/preserve-border-edges-enabled.png)
