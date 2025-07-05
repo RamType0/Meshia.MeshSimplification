@@ -1,4 +1,4 @@
-# Use from C#
+# Getting started
 
 All of Meshia's core APIs are provided through [`MeshSimplifier`](~/api/Meshia.MeshSimplification.MeshSimplifier.html).
 

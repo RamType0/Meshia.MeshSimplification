@@ -4,7 +4,7 @@ VRChat向けの機能として、Meshia Mesh Simplifierと Meshia Cascading Avat
 
 # アバター改変向けに両方使いたい
 
-[ModularAvatar](https://modular-avatar.nadena.dev/ja)をインストールしてください。
+[Modular Avatar](https://modular-avatar.nadena.dev/ja)をインストールしてください。
 
 # ワールド改変向けにMeshia Mesh Simplifierを使いたい
 
