@@ -1,4 +1,8 @@
 - name: Meshia Mesh Simplificationとは？
   href: introduction.md
-- name: チュートリアル
-  href: getting-started.md
+- name: インストール
+  href: installation.md
+- name: VRChat
+  href: vrchat/toc.yml
+- name: C# API
+  href: csharp-api/toc.yml
