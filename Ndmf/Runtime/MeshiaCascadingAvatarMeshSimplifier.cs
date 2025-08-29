@@ -134,18 +134,8 @@ namespace Meshia.MeshSimplification.Ndmf
     {
         public AvatarObjectReference RendererObjectReference;
         public int TargetTriangleCount;
-        public MeshSimplifierOptions Options;
-        public ulong PreserveBorderEdgesBones;
-        public bool Enabled;
-        public bool Fixed;
-
-        public MeshiaCascadingAvatarMeshSimplifierRendererEntry(Renderer renderer)
-        {
-            RendererObjectReference = new AvatarObjectReference();
-            RendererObjectReference.Set(renderer.gameObject);
-            TargetTriangleCount = RendererUtility.GetMesh(renderer)?.GetTriangleCount() ?? 0;
-            Options = MeshSimplifierOptions.Default;
-            PreserveBorderEdgesBones =
+        public MeshSimplifierOptions Options = MeshSimplifierOptions.Default;
+        public ulong PreserveBorderEdgesBones =
             (1ul << (int)HumanBodyBones.LeftThumbProximal) |
             (1ul << (int)HumanBodyBones.LeftThumbIntermediate) |
             (1ul << (int)HumanBodyBones.LeftThumbDistal) |
@@ -176,8 +166,14 @@ namespace Meshia.MeshSimplification.Ndmf
             (1ul << (int)HumanBodyBones.RightLittleProximal) |
             (1ul << (int)HumanBodyBones.RightLittleIntermediate) |
             (1ul << (int)HumanBodyBones.RightLittleDistal);
-            Enabled = true;
-            Fixed = false;
+        public bool Enabled = true;
+        public bool Fixed = false;
+
+        public MeshiaCascadingAvatarMeshSimplifierRendererEntry(Renderer renderer)
+        {
+            RendererObjectReference = new AvatarObjectReference();
+            RendererObjectReference.Set(renderer.gameObject);
+            TargetTriangleCount = RendererUtility.GetMesh(renderer)?.GetTriangleCount() ?? 0;
         }
 
         internal static bool IsValidTarget([NotNullWhen(true)] Renderer? renderer)
