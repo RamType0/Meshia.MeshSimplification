@@ -91,43 +91,4 @@ namespace Meshia.MeshSimplification
             return !(left == right);
         }
     }
-
-    [Serializable]
-    public struct BitArray256
-    {
-        [SerializeField]
-        ulong bits0, bit1, bits2, bits3;
-
-        public void SetBit(int index, bool value)
-        {
-            if ((uint)index > 255)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index), "Index must be between 0 and 255.");
-            }
-            ref var targetBits = ref Unsafe.Add(ref bits0, index >> 6);
-            ulong mask = 1UL << (index & 63);
-            if (value)
-            {
-                targetBits |= mask;
-            }
-            else
-            {
-                targetBits &= ~mask;
-            }
-        }
-        public bool IsSet(int index)
-        {
-            if ((uint)index > 255)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index), "Index must be between 0 and 255.");
-            }
-            ref var targetBits = ref Unsafe.Add(ref bits0, index >> 6);
-            ulong mask = 1UL << (index & 63);
-            return (targetBits & mask) != 0;
-        }
-
-        public void Clear() => this = default;
-    }
 }
-
-
