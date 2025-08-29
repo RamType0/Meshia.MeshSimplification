@@ -1,6 +1,10 @@
 ﻿#nullable enable
 using System;
 using UnityEngine;
+using Unity.Collections;
+using Unity.Mathematics;
+using Unity.Collections.LowLevel.Unsafe;
+using System.Runtime.CompilerServices;
 namespace Meshia.MeshSimplification
 {
     [Serializable]
@@ -54,7 +58,6 @@ namespace Meshia.MeshSimplification
         public float VertexLinkUvDistance;
 
 
-
         public readonly override bool Equals(object obj)
         {
             return obj is MeshSimplifierOptions options && Equals(options);
@@ -89,5 +92,3 @@ namespace Meshia.MeshSimplification
         }
     }
 }
-
-

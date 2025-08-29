@@ -7,13 +7,24 @@ namespace Meshia.MeshSimplification
 {
     struct MergeFactory
     {
-        public NativeArray<float3> VertexPositions;
+        public NativeArray<float3> VertexPositionBuffer;
+        public NativeArray<uint> VertexBlendIndicesBuffer;
         public NativeArray<ErrorQuadric> VertexErrorQuadrics;
         public NativeParallelMultiHashMap<int, int> VertexContainingTriangles;
         public NativeBitArray VertexIsBorderEdgeBits;
+        public NativeBitArray PreserveBorderEdgesBoneIndices;
         public NativeArray<float3> TriangleNormals;
-        public MeshSimplifierOptions Options;
+        public bool PreserveBorderEdges;
+        public bool PreserveSurfaceCurvature;
 
+        PreservedVertexPredicator PreservedVertexPredicator => new()
+        {
+            VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
+            VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
+            PreserveBorderEdgesBoneIndices = PreserveBorderEdgesBoneIndices,
+            VertexBoneCount = VertexBlendIndicesBuffer.Length / VertexPositionBuffer.Length,
+            PreserveBorderEdges = PreserveBorderEdges,
+        };
 
         [BurstCompile]
         static class ProfilerMarkers
@@ -28,31 +39,30 @@ namespace Meshia.MeshSimplification
             {
                 var q = VertexErrorQuadrics[vertices.x] + VertexErrorQuadrics[vertices.y];
 
-                var xIsBorderEdge = VertexIsBorderEdgeBits.IsSet(vertices.x);
-                var yIsBorderEdge = VertexIsBorderEdgeBits.IsSet(vertices.y);
-
-                var positionX = VertexPositions[vertices.x];
-                var positionY = VertexPositions[vertices.y];
+                var positionX = VertexPositionBuffer[vertices.x];
+                var positionY = VertexPositionBuffer[vertices.y];
 
                 float vertexError;
-                if (Options.PreserveBorderEdges)
+
+                var preservedVertexPredicator = PreservedVertexPredicator;
+
+                var preserveX = preservedVertexPredicator.IsPreserved(vertices.x);
+                var preserveY = preservedVertexPredicator.IsPreserved(vertices.y);
+                if (preserveX && preserveY)
                 {
-                    if (xIsBorderEdge && yIsBorderEdge)
-                    {
-                        position = float.NaN;
-                        cost = float.PositiveInfinity;
-                        return false;
-                    }
-                    else if (xIsBorderEdge)
-                    {
-                        position = positionX;
-                        goto ComputeVertexError;
-                    }
-                    else if (yIsBorderEdge)
-                    {
-                        position = positionY;
-                        goto ComputeVertexError;
-                    }
+                    position = float.NaN;
+                    cost = float.PositiveInfinity;
+                    return false;
+                }
+                else if (preserveX)
+                {
+                    position = positionX;
+                    goto ComputeVertexError;
+                }
+                else if (preserveY)
+                {
+                    position = positionY;
+                    goto ComputeVertexError;
                 }
 
                 var determinant = q.Determinant1();
@@ -110,7 +120,7 @@ namespace Meshia.MeshSimplification
                 vertexError = q.ComputeError(position);
 
             ApplyCurvatureError:
-                var curvatureError = Options.PreserveSurfaceCurvature ? ComputeCurvatureError(vertices) : 0;
+                var curvatureError = PreserveSurfaceCurvature ? ComputeCurvatureError(vertices) : 0;
 
                 cost = vertexError + curvatureError;
                 return true;
@@ -122,7 +132,7 @@ namespace Meshia.MeshSimplification
 
             using (ProfilerMarkers.ComputeCurvatureError.Auto())
             {
-                var distance = math.distance(VertexPositions[vertices.x], VertexPositions[vertices.y]);
+                var distance = math.distance(VertexPositionBuffer[vertices.x], VertexPositionBuffer[vertices.y]);
                 using UnsafeHashSet<int> vertexXContainingTriangles = new(8, Allocator.Temp);
 
                 using UnsafeList<int> vertexXOrYContainingTriangles = new(16, Allocator.Temp);

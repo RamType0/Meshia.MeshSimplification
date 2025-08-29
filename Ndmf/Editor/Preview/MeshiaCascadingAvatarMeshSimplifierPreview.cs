@@ -1,10 +1,14 @@
 #nullable enable
 #if ENABLE_MODULAR_AVATAR
 
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using nadena.dev.ndmf.preview;
+using nadena.dev.ndmf.util;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
@@ -37,7 +41,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             return groups.ToImmutableList();
         }
         
-        protected override (MeshSimplificationTarget, MeshSimplifierOptions) QueryTarget(ComputeContext context, RenderGroup group, Renderer original, Renderer proxy)
+        protected override (MeshSimplificationTarget, MeshSimplifierOptions, BitArray?) QueryTarget(ComputeContext context, RenderGroup group, Renderer original, Renderer proxy)
         {
             var data = group.GetData<(MeshiaCascadingAvatarMeshSimplifier, int)>();
             var component = data.Item1;
@@ -45,7 +49,42 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 
             var cascadingTarget = context.Observe(component, c => c.Entries[index] with { }, (a, b) => a.Equals(b));
             var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = cascadingTarget.TargetTriangleCount };
-            return (target, cascadingTarget.Options);
+
+
+
+
+            if(original is SkinnedMeshRenderer skinnedMeshRenderer)
+            {
+                var avatarRoot = context.GetAvatarRoot(original.gameObject);
+                if(avatarRoot != null)
+                {
+                    var avatarAnimator = avatarRoot.GetComponent<Animator>();
+
+                    var bones = skinnedMeshRenderer.bones;
+                    var preserveBorderEdgeBoneIndices = new BitArray(bones.Length);
+
+                    for (ulong boneMask = cascadingTarget.PreserveBorderEdgesBones; boneMask != 0ul; boneMask &= boneMask - 1)
+                    {
+                        var bone = (HumanBodyBones)math.tzcnt(boneMask);
+                        var boneTransform = avatarAnimator.GetBoneTransform(bone);
+                        if (boneTransform != null)
+                        {
+                            var boneIndex = Array.IndexOf(bones, boneTransform);
+                            if (boneIndex >= 0)
+                            {
+                                preserveBorderEdgeBoneIndices.Set(boneIndex, true);
+                            }
+                        }
+                    }
+
+                    return (target, cascadingTarget.Options, preserveBorderEdgeBoneIndices);
+                }
+                
+            }
+            return (target, cascadingTarget.Options, null);
+
+
+
         }
     }
 }

@@ -22,7 +22,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public List<MeshiaCascadingAvatarMeshSimplifierRendererEntry> Entries = new();
         public int TargetTriangleCount = 70000;
         public bool AutoAdjustEnabled = true;
-
+        
         public void RefreshEntries()
         {
             using (ListPool<Renderer>.Get(out var ownedRenderers))
@@ -135,6 +135,7 @@ namespace Meshia.MeshSimplification.Ndmf
         public AvatarObjectReference RendererObjectReference;
         public int TargetTriangleCount;
         public MeshSimplifierOptions Options;
+        public ulong PreserveBorderEdgesBones;
         public bool Enabled;
         public bool Fixed;
 
@@ -144,6 +145,37 @@ namespace Meshia.MeshSimplification.Ndmf
             RendererObjectReference.Set(renderer.gameObject);
             TargetTriangleCount = RendererUtility.GetMesh(renderer)?.GetTriangleCount() ?? 0;
             Options = MeshSimplifierOptions.Default;
+            PreserveBorderEdgesBones =
+            (1ul << (int)HumanBodyBones.LeftThumbProximal) |
+            (1ul << (int)HumanBodyBones.LeftThumbIntermediate) |
+            (1ul << (int)HumanBodyBones.LeftThumbDistal) |
+            (1ul << (int)HumanBodyBones.LeftIndexProximal) |
+            (1ul << (int)HumanBodyBones.LeftIndexIntermediate) |
+            (1ul << (int)HumanBodyBones.LeftIndexDistal) |
+            (1ul << (int)HumanBodyBones.LeftMiddleProximal) |
+            (1ul << (int)HumanBodyBones.LeftMiddleIntermediate) |
+            (1ul << (int)HumanBodyBones.LeftMiddleDistal) |
+            (1ul << (int)HumanBodyBones.LeftRingProximal) |
+            (1ul << (int)HumanBodyBones.LeftRingIntermediate) |
+            (1ul << (int)HumanBodyBones.LeftRingDistal) |
+            (1ul << (int)HumanBodyBones.LeftLittleProximal) |
+            (1ul << (int)HumanBodyBones.LeftLittleIntermediate) |
+            (1ul << (int)HumanBodyBones.LeftLittleDistal) |
+            (1ul << (int)HumanBodyBones.RightThumbProximal) |
+            (1ul << (int)HumanBodyBones.RightThumbIntermediate) |
+            (1ul << (int)HumanBodyBones.RightThumbDistal) |
+            (1ul << (int)HumanBodyBones.RightIndexProximal) |
+            (1ul << (int)HumanBodyBones.RightIndexIntermediate) |
+            (1ul << (int)HumanBodyBones.RightIndexDistal) |
+            (1ul << (int)HumanBodyBones.RightMiddleProximal) |
+            (1ul << (int)HumanBodyBones.RightMiddleIntermediate) |
+            (1ul << (int)HumanBodyBones.RightMiddleDistal) |
+            (1ul << (int)HumanBodyBones.RightRingProximal) |
+            (1ul << (int)HumanBodyBones.RightRingIntermediate) |
+            (1ul << (int)HumanBodyBones.RightRingDistal) |
+            (1ul << (int)HumanBodyBones.RightLittleProximal) |
+            (1ul << (int)HumanBodyBones.RightLittleIntermediate) |
+            (1ul << (int)HumanBodyBones.RightLittleDistal);
             Enabled = true;
             Fixed = false;
         }
@@ -187,6 +219,7 @@ namespace Meshia.MeshSimplification.Ndmf
             RendererObjectReference.Get(container);
         }
     }
+
 }
 
 #endif

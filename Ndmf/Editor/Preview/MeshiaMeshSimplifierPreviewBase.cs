@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using nadena.dev.ndmf.preview;
+using System.Collections;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 {
@@ -39,12 +40,12 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             var proxy = proxyPairs.First().Item2;
             var proxyMesh = RendererUtility.GetRequiredMesh(proxy);
 
-            var (target, options) = QueryTarget(context, group, original, proxy);
+            var (target, options, preserveBorderEdgesBoneIndices) = QueryTarget(context, group, original, proxy);
 
             Mesh simplifiedMesh = new();
             try
             {
-                await MeshSimplifier.SimplifyAsync(proxyMesh, target, options, simplifiedMesh);
+                await MeshSimplifier.SimplifyAsync(proxyMesh, target, options, preserveBorderEdgesBoneIndices, simplifiedMesh);
             }
             catch (Exception)
             {
@@ -57,7 +58,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             return new NdmfMeshSimplifierPreviewNode(simplifiedMesh);
         }
 
-        protected abstract (MeshSimplificationTarget, MeshSimplifierOptions) QueryTarget(ComputeContext context, RenderGroup group, Renderer original, Renderer proxy);
+        protected abstract (MeshSimplificationTarget, MeshSimplifierOptions, BitArray?) QueryTarget(ComputeContext context, RenderGroup group, Renderer original, Renderer proxy);
     }
 
     internal class NdmfMeshSimplifierPreviewNode : IRenderFilterNode

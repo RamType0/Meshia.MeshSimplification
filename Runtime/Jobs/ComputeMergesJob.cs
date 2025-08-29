@@ -19,20 +19,28 @@ namespace Meshia.MeshSimplification
         public NativeBitArray VertexIsBorderEdgeBits;
         [ReadOnly]
         public NativeArray<int2> Edges;
+        [ReadOnly]
+        public NativeArray<uint> VertexBlendIndicesBuffer;
+
+        [ReadOnly]
+        public NativeBitArray PreserveBorderEdgesBoneIndices;
         [WriteOnly]
         public NativeArray<VertexMerge> UnorderedDirtyVertexMerges;
-
-        public MeshSimplifierOptions Options;
+        public bool PreserveBorderEdges;
+        public bool PreserveSurfaceCurvature;
         public void Execute(int index)
         {
             var mergeFactory = new MergeFactory
             {
-                VertexPositions = VertexPositionBuffer,
+                VertexPositionBuffer = VertexPositionBuffer,
                 VertexErrorQuadrics = VertexErrorQuadrics,
                 VertexContainingTriangles = VertexContainingTriangles,
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
                 TriangleNormals = TriangleNormals,
-                Options = Options,
+                PreserveBorderEdges = PreserveBorderEdges,
+                PreserveSurfaceCurvature = PreserveSurfaceCurvature,
+                PreserveBorderEdgesBoneIndices = PreserveBorderEdgesBoneIndices,
+                VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
             };
             var edge = Edges[index];
             VertexMerge merge;
