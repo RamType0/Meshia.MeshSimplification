@@ -76,8 +76,11 @@ jobs:
      - name: Setup vrc-get
        uses: anatawa12/sh-actions/setup-vrc-get@master
        
-     - name: Add VPM repositories
+     - name: Add Ram.Type-0 VPM repo
        run: vrc-get repo add https://ramtype0.github.io/VpmRepository/index.json
+       
+     - name: Add bd_ VPM repo
+       run: vrc-get repo add https://vpm.nadena.dev/vpm.json
        
      - name: Install VPM packages
        working-directory: ${{ env.PROJECT_PATH }}
