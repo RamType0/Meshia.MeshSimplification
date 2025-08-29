@@ -70,7 +70,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
                         if (boneTransform != null)
                         {
                             var boneIndex = Array.IndexOf(bones, boneTransform);
-                            if (boneIndex > 0)
+                            if (boneIndex >= 0)
                             {
                                 preserveBorderEdgeBoneIndices.Set(boneIndex, true);
                             }
