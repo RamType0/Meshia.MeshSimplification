@@ -10,6 +10,7 @@ using nadena.dev.ndmf.runtime;
 using nadena.dev.modular_avatar.core;
 using UnityEngine.Pool;
 using System.Diagnostics.CodeAnalysis;
+using System.ComponentModel;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
@@ -169,6 +170,13 @@ namespace Meshia.MeshSimplification.Ndmf
         public bool Enabled = true;
         public bool Fixed = false;
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        [Obsolete("For serialization only", true)]
+#pragma warning disable CS8618
+        private MeshiaCascadingAvatarMeshSimplifierRendererEntry()
+#pragma warning restore CS8618
+        {
+        }
         public MeshiaCascadingAvatarMeshSimplifierRendererEntry(Renderer renderer)
         {
             RendererObjectReference = new AvatarObjectReference();
