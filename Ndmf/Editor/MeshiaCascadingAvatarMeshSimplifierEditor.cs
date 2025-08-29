@@ -186,6 +186,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var targetTriangleCountField = itemRoot.Q<IntegerField>("TargetTriangleCountField");
                 var originalTriangleCountField = itemRoot.Q<IntegerField>("OriginalTriangleCountField");
                 var unknownOriginalTriangleCountField = itemRoot.Q<TextField>("UnknownOriginalTriangleCountField");
+                var preserveBorderEdgesBonesFoldout = itemRoot.Q<Foldout>("PreserveBorderEdgesBonesFoldout");
                 itemRoot.BindProperty(entryProperty);
                 itemRoot.userData = index;
                 var targetRenderer = entry.GetTargetRenderer(Target);
@@ -225,7 +226,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                 }
 
+                var humanBodyBoneIndex = 0;
+                var preserveBorderEdgesBonesProperty = EntriesProperty.GetArrayElementAtIndex(index).FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.PreserveBorderEdgesBones));
+                var preserveBorderEdgesBones = preserveBorderEdgesBonesProperty.ulongValue;
+                foreach (var preserveBorderEdgesBoneToggle in preserveBorderEdgesBonesFoldout.Children().OfType<Toggle>())
+                {
+                    preserveBorderEdgesBoneToggle.value = (preserveBorderEdgesBones & (1ul << humanBodyBoneIndex)) != 0ul;
 
+                    humanBodyBoneIndex++;
+                }
             };
 
 
@@ -239,6 +248,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 var triangleCountDivider = itemRoot.Q<Label>("TriangleCountDivider");
                 var optionsToggle = itemRoot.Q<Toggle>("OptionsToggle");
                 var optionsField = itemRoot.Q<PropertyField>("OptionsField");
+                var preserveBorderEdgesBonesFoldout = itemRoot.Q<Foldout>("PreserveBorderEdgesBonesFoldout");
                 enabledToggle.RegisterValueChangedCallback(changeEvent =>
                 {
                     var enabled = changeEvent.newValue;
@@ -268,9 +278,39 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                 optionsToggle.RegisterValueChangedCallback(changeEvent =>
                 {
-                    optionsField.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                    optionsField.style.display = preserveBorderEdgesBonesFoldout.style.display = changeEvent.newValue ? DisplayStyle.Flex : DisplayStyle.None;
                 });
-                
+
+
+
+                for (HumanBodyBones bone = 0; bone < HumanBodyBones.LastBone; bone++)
+                {
+                    var humanBodyBoneIndex = (int)bone;
+                    Toggle preserveBorderEdgesBoneToggle = new(bone.ToString());
+                    preserveBorderEdgesBoneToggle.RegisterValueChangedCallback(changeEvent =>
+                    {
+                        if(itemRoot.userData is int itemIndex)
+                        {
+                            var preserveBorderEdgesBonesProperty = EntriesProperty.GetArrayElementAtIndex(itemIndex).FindPropertyRelative(nameof(MeshiaCascadingAvatarMeshSimplifierRendererEntry.PreserveBorderEdgesBones));
+                            serializedObject.Update();
+                            var currentMask = preserveBorderEdgesBonesProperty.ulongValue;
+                            if (changeEvent.newValue)
+                            {
+                                currentMask |= (1ul << humanBodyBoneIndex);
+                            }
+                            else
+                            {
+                                currentMask &= ~(1ul << humanBodyBoneIndex);
+                            }
+                            preserveBorderEdgesBonesProperty.ulongValue = currentMask;
+
+                            serializedObject.ApplyModifiedProperties();
+                        }
+                        
+                    });
+                    preserveBorderEdgesBonesFoldout.Add(preserveBorderEdgesBoneToggle);
+                }
+
                 return itemRoot;
             };
 

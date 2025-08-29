@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -171,7 +172,19 @@ namespace Meshia.MeshSimplification
         /// <param name="destination">The destination to write simplified mesh.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
         /// <returns>A task that represents the asynchronous mesh simplification operation.</returns>
-        public static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination, CancellationToken cancellationToken = default)
+        public static Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination, CancellationToken cancellationToken = default)
+            => SimplifyAsync(mesh, target, options, null, destination, cancellationToken);
+
+        /// <summary>
+        /// Asynchronously simplifies the given <paramref name="mesh"/> and writes the result to <paramref name="destination"/>.
+        /// </summary>
+        /// <param name="mesh">The mesh to simplify.</param>
+        /// <param name="target">The simplification target for this mesh simplification.</param>
+        /// <param name="options">The options for this mesh simplification.</param>
+        /// <param name="destination">The destination to write simplified mesh.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
+        /// <returns>A task that represents the asynchronous mesh simplification operation.</returns>
+        public static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination, CancellationToken cancellationToken = default)
         {
             Allocator allocator = Unity.Collections.Allocator.Persistent;
             var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
@@ -180,11 +193,21 @@ namespace Meshia.MeshSimplification
 
             var meshSimplifier = new MeshSimplifier(allocator);
 
-            var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
+            NativeBitArray nativePreserveBorderEdgesBoneIndices = new(preserveBorderEdgesBoneIndices?.Length ?? 0, allocator, NativeArrayOptions.UninitializedMemory);
+            if(preserveBorderEdgesBoneIndices is not null)
+            {
+                for (int i = 0; i < preserveBorderEdgesBoneIndices.Length; i++)
+                {
+                    nativePreserveBorderEdgesBoneIndices.Set(i, preserveBorderEdgesBoneIndices[i]);
+                }
+            }
+
+            var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options, nativePreserveBorderEdgesBoneIndices);
 
             var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
-            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, nativePreserveBorderEdgesBoneIndices, load);
+            nativePreserveBorderEdgesBoneIndices.Dispose(simplify);
             var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[0], simplifiedBlendShapes, simplify);
             meshSimplifier.Dispose(write);
             JobHandle.ScheduleBatchedJobs();
@@ -333,6 +356,22 @@ namespace Meshia.MeshSimplification
         /// <returns>The handle of a new job that will load mesh data from the <paramref name="meshData"/> into this <see cref="MeshSimplifier"/>.</returns>
         public JobHandle ScheduleLoadMeshData(Mesh.MeshData meshData, MeshSimplifierOptions options, JobHandle dependency = default)
         {
+            NativeBitArray preserveBorderEdgesBoneIndices = new(0, Allocator);
+            var jobHandle = ScheduleLoadMeshData(meshData, options, preserveBorderEdgesBoneIndices, dependency);
+
+            preserveBorderEdgesBoneIndices.Dispose(jobHandle);
+            return jobHandle;
+        }
+        
+        /// <summary>
+         /// Creates and schedules a job that will load mesh data from the <paramref name="meshData"/> into this <see cref="MeshSimplifier"/>.
+         /// </summary>
+         /// <param name="meshData">The mesh data to load.</param>
+         /// <param name="options">The options for this mesh simplification.</param>
+         /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
+         /// <returns>The handle of a new job that will load mesh data from the <paramref name="meshData"/> into this <see cref="MeshSimplifier"/>.</returns>
+        public JobHandle ScheduleLoadMeshData(Mesh.MeshData meshData, MeshSimplifierOptions options, NativeBitArray preserveBorderEdgesBoneIndices, JobHandle dependency = default)
+        {
             Options = options;
             var constructVertexPositionBuffer = ScheduleCopyVertexPositionBuffer(meshData, dependency);
             var constructVertexNormalBuffer = ScheduleCopyVertexAttributeBufferAsFloat4(meshData, VertexAttribute.Normal, dependency);
@@ -409,7 +448,7 @@ namespace Meshia.MeshSimplification
 
             triangleErrorQuadrics.Dispose(constructVertexErrorQuadrics);
 
-            var constructVertexMerges = ScheduleInitializeVertexMerges(mergePairs, constructVertexPositionBuffer, constructVertexErrorQuadrics, constructTriangleNormalsAndErrorQuadrics, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructVertexIsBorderEdgeBits, constructMergePairs);
+            var constructVertexMerges = ScheduleInitializeVertexMerges(mergePairs, preserveBorderEdgesBoneIndices, constructVertexPositionBuffer, constructVertexBlendIndicesBuffer, constructVertexErrorQuadrics, constructTriangleNormalsAndErrorQuadrics, constructVertexContainingTrianglesAndTriangleDiscardedBits, constructVertexIsBorderEdgeBits, constructMergePairs);
 
             mergePairs.Dispose(constructVertexMerges);
 
@@ -469,6 +508,26 @@ namespace Meshia.MeshSimplification
         /// </remarks>
         public JobHandle ScheduleSimplify(Mesh.MeshData meshData, NativeList<BlendShapeData> blendShapes, MeshSimplificationTarget target, JobHandle dependency)
         {
+
+            NativeBitArray preserveBorderEdgesBoneIndices = new(0, Allocator);
+            var jobHandle = ScheduleSimplify(meshData, blendShapes, target, preserveBorderEdgesBoneIndices, dependency);
+
+            preserveBorderEdgesBoneIndices.Dispose(jobHandle);
+
+            return jobHandle;
+        }/// <summary>
+         /// Creates and schedules a job that will simplify the mesh data.
+         /// </summary>
+         /// <param name="meshData">The mesh data to simplify. It must be the same with the mesh which was passed to <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>.</param>
+         /// <param name="blendShapes">The blend shapes of the <paramref name="meshData"/>.</param>
+         /// <param name="target">The simplification target for this mesh simplification.</param>
+         /// <param name="dependency">The handle of a job which the new job will depend upon.</param>
+         /// <returns>The handle of the new job.</returns>
+         /// <remarks>
+         /// After you call <see cref="ScheduleLoadMeshData(Mesh.MeshData, MeshSimplifierOptions, JobHandle)"/>, you can call this method repeatedly to incrementally simplify the same mesh data with different targets.
+         /// </remarks>
+        public JobHandle ScheduleSimplify(Mesh.MeshData meshData, NativeList<BlendShapeData> blendShapes, MeshSimplificationTarget target, NativeBitArray preserveBorderEdgesBoneIndices, JobHandle dependency)
+        {
             return new SimplifyJob
             {
                 Mesh = meshData,
@@ -500,7 +559,7 @@ namespace Meshia.MeshSimplification
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
                 Options = Options,
                 VertexMerges = VertexMerges,
-
+                PreserveBorderEdgesBoneIndices = preserveBorderEdgesBoneIndices,
                 SmartLinks = SmartLinks,
             }.Schedule(dependency);
         }
@@ -905,13 +964,14 @@ namespace Meshia.MeshSimplification
         }
         JobHandle ScheduleInitializeVertexMerges(
             NativeList<int2> edges,
+            NativeBitArray preserveBorderEdgesBoneIndices,
             JobHandle vertexPositionBufferDependency,
+            JobHandle vertexBlendIndicesBufferDependency,
             JobHandle vertexErrorQuadricsDependency,
             JobHandle triangleNormalsDependency,
             JobHandle vertexContainingTrianglesDependency,
             JobHandle vertexIsBorderEdgeBitsDependency,
-            JobHandle edgesDependency
-            )
+            JobHandle edgesDependency)
         {
             NativeList<VertexMerge> unorderedDirtyVertexMerges = new(Allocator);
             var initializeVertexMergesJob = new InitializeUnorderedDirtyVertexMergesJob
@@ -929,11 +989,16 @@ namespace Meshia.MeshSimplification
                 VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
                 Edges = edges.AsDeferredJobArray(),
                 UnorderedDirtyVertexMerges = unorderedDirtyVertexMerges.AsDeferredJobArray(),
-                Options = Options,
+                
+                PreserveBorderEdges = Options.PreserveBorderEdges,
+                PreserveSurfaceCurvature = Options.PreserveSurfaceCurvature,
+                VertexBlendIndicesBuffer = VertexBlendIndicesBuffer.AsDeferredJobArray(),
+                PreserveBorderEdgesBoneIndices = preserveBorderEdgesBoneIndices,
             }.Schedule(edges, JobsUtility.CacheLineSize,
             stackalloc[]
             {
                 vertexPositionBufferDependency,
+                vertexBlendIndicesBufferDependency,
                 vertexErrorQuadricsDependency,
                 triangleNormalsDependency,
                 vertexContainingTrianglesDependency,

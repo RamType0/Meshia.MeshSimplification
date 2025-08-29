@@ -36,7 +36,6 @@ namespace Meshia.MeshSimplification
         public NativeArray<float4> VertexTexCoord6Buffer;
         public NativeArray<float4> VertexTexCoord7Buffer;
 
-        public int VertexBlendWeightCount => VertexBlendWeightBuffer.Length / VertexPositionBuffer.Length;
         public NativeArray<float> VertexBlendWeightBuffer;
         public NativeArray<uint> VertexBlendIndicesBuffer;
 
@@ -57,6 +56,7 @@ namespace Meshia.MeshSimplification
         public NativeBitArray DiscardedVertex;
 
         public NativeBitArray DiscardedTriangle;
+        public NativeBitArray PreserveBorderEdgesBoneIndices;
 
         public NativeArray<float3> TriangleNormals;
         public NativeHashSet<int2> SmartLinks;
@@ -69,14 +69,26 @@ namespace Meshia.MeshSimplification
         private int TriangleCount;
         MergeFactory MergeFactory => new()
         {
-
-            VertexPositions = VertexPositionBuffer,
+            VertexPositionBuffer = VertexPositionBuffer,
+            VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
             VertexErrorQuadrics = VertexErrorQuadrics,
             TriangleNormals = TriangleNormals,
             VertexContainingTriangles = VertexContainingTriangles,
 
             VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
-            Options = Options,
+            PreserveBorderEdgesBoneIndices = PreserveBorderEdgesBoneIndices,
+            PreserveBorderEdges = Options.PreserveBorderEdges,
+            PreserveSurfaceCurvature = Options.PreserveSurfaceCurvature,
+
+        };
+
+        PreservedVertexPredicator PreservedVertexPredicator => new()
+        {
+            VertexBlendIndicesBuffer = VertexBlendIndicesBuffer,
+            VertexIsBorderEdgeBits = VertexIsBorderEdgeBits,
+            PreserveBorderEdgesBoneIndices = PreserveBorderEdgesBoneIndices,
+            VertexBoneCount = VertexBlendIndicesBuffer.Length / VertexPositionBuffer.Length,
+            PreserveBorderEdges = Options.PreserveBorderEdges,
         };
 
         public void Execute()
@@ -268,6 +280,7 @@ namespace Meshia.MeshSimplification
         }
 
         readonly bool IsDiscardedVertex(int vertex) => DiscardedVertex.IsSet(vertex);
+        
         void DiscardVertex(int vertex)
         {
             if (!IsDiscardedVertex(vertex))
@@ -297,16 +310,31 @@ namespace Meshia.MeshSimplification
                 var vertexB = merge.VertexBIndex;
                 int2 vertexPair = new(math.min(vertexA, vertexB), math.max(vertexA, vertexB));
 
-                if (!VertexIsBorderEdgeBits.IsSet(vertexA) && VertexIsBorderEdgeBits.IsSet(vertexB))
+                var isSmartLink = SmartLinks.Contains(vertexPair);
+
+                var vertexAIsBorderEdge = VertexIsBorderEdgeBits.IsSet(vertexA);
+                var vertexBIsBorderEdge = VertexIsBorderEdgeBits.IsSet(vertexB);
+
+                var containsBorderEdge = vertexAIsBorderEdge | vertexBIsBorderEdge;
+
+                var preservedVertexPredicator = PreservedVertexPredicator;
+
+                var shouldPreserveVertexA = preservedVertexPredicator.IsPreserved(vertexA);
+
+                var shouldPreserveVertexB = preservedVertexPredicator.IsPreserved(vertexB);
+
+                if (shouldPreserveVertexB)
                 {
                     (vertexA, vertexB) = (vertexB, vertexA);
                 }
 
-                if (!Options.PreserveBorderEdges || !VertexIsBorderEdgeBits.IsSet(vertexA) || SmartLinks.Contains(vertexPair))
+                if (!(shouldPreserveVertexA | shouldPreserveVertexB))
                 {
                     MergeVertexAttributeData(vertexA, vertexB, merge.Position);
                 }
 
+                VertexIsBorderEdgeBits.Set(vertexA, containsBorderEdge);
+                VertexIsBorderEdgeBits.Set(vertexB, containsBorderEdge);
 
 
 
@@ -664,7 +692,7 @@ namespace Meshia.MeshSimplification
                 var vertexBlendWeights = VertexBlendWeightBuffer.AsSpan();
                 var vertexBlendIndices = VertexBlendIndicesBuffer.AsSpan();
 
-                var dimension = VertexBlendWeightCount;
+                var dimension = VertexBlendIndicesBuffer.Length / VertexPositionBuffer.Length;
 
                 Span<float> blendWeightsAB = stackalloc float[dimension * 2];
                 Span<uint> blendIndicesAB = stackalloc uint[dimension * 2];
@@ -744,6 +772,38 @@ namespace Meshia.MeshSimplification
                     weight *= mergedBlendWeightNormalizer;
                 }
             }
+        }
+    }
+
+
+    struct PreservedVertexPredicator
+    {
+        public NativeArray<uint> VertexBlendIndicesBuffer;
+        public NativeBitArray VertexIsBorderEdgeBits;
+        public NativeBitArray PreserveBorderEdgesBoneIndices;
+        public int VertexBoneCount;
+        public bool PreserveBorderEdges;
+        public readonly bool IsPreserved(int vertexIndex)
+        {
+            if (VertexIsBorderEdgeBits.IsSet(vertexIndex))
+            {
+                if (PreserveBorderEdges)
+                {
+                    return true;
+                }
+                if (VertexBlendIndicesBuffer.Length > 0 && PreserveBorderEdgesBoneIndices.Length > 0)
+                {
+                    var vertexBlendIndices = VertexBlendIndicesBuffer.GetSubArray(vertexIndex * VertexBoneCount, VertexBoneCount);
+                    for (int i = 0; i < vertexBlendIndices.Length; i++)
+                    {
+                        if (PreserveBorderEdgesBoneIndices.IsSet((int)vertexBlendIndices[i]))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
     }
 }

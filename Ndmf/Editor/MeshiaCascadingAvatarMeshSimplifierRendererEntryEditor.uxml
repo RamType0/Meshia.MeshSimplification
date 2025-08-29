@@ -13,4 +13,5 @@
         <ui:Toggle name="OptionsToggle" style="align-self: center;" />
     </ui:VisualElement>
     <uie:PropertyField binding-path="Options" name="OptionsField" style="display: none;" />
+    <ui:Foldout text="Preserve Border Edges Bones" name="PreserveBorderEdgesBonesFoldout" value="false" style="display: none;" />
 </ui:UXML>
