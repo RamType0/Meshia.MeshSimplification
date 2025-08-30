@@ -13,9 +13,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
         public override ImmutableList<RenderGroup> GetTargetGroups(ComputeContext context)
         {
             return context.GetComponentsByType<MeshiaMeshSimplifier>()
-            .Select(ndmfMeshSimplifier => context.GetComponent<Renderer>(ndmfMeshSimplifier.gameObject))
+            .Where(meshiaMeshSimplifier => context.ActiveAndEnabled(meshiaMeshSimplifier))
+            .Select(meshiaMeshSimplifier => context.GetComponent<Renderer>(meshiaMeshSimplifier.gameObject))
             .Where(renderer => renderer is MeshRenderer or SkinnedMeshRenderer)
-            .Where(renderer => context.ActiveInHierarchy(renderer.gameObject))
             .Select(renderer => RenderGroup.For(renderer))
             .ToImmutableList();
         }

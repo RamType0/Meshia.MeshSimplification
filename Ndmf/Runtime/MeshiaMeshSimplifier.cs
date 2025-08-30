@@ -17,6 +17,8 @@ namespace Meshia.MeshSimplification.Ndmf
             Value = 0.5f,
         };
         public MeshSimplifierOptions options = MeshSimplifierOptions.Default;
+
+        void Start() { } // To show enabled checkbox in inspector
     }
 
 }
