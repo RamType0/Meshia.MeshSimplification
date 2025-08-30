@@ -4,6 +4,7 @@ using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.preview;
 using System;
+using System.Collections;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -39,11 +40,11 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                 {
                     var meshiaMeshSimplifiers = context.AvatarRootObject.GetComponentsInChildren<MeshiaMeshSimplifier>(true);
 #if ENABLE_MODULAR_AVATAR
-
+                    
                     var meshiaCascadingMeshSimplifiers = context.AvatarRootObject.GetComponentsInChildren<MeshiaCascadingAvatarMeshSimplifier>(true);
 #endif
 
-                    using (ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)>.Get(out var parameters))
+                    using (ListPool<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, BitArray? preserveBorderEdgesBoneIndices, Mesh Destination)>.Get(out var parameters))
                     {
                         foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
                         {
@@ -51,7 +52,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             {
                                 var sourceMesh = RendererUtility.GetRequiredMesh(renderer);
                                 Mesh simplifiedMesh = new();
-                                parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, simplifiedMesh));
+                                parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, null, simplifiedMesh));
                             }
                         }
 #if ENABLE_MODULAR_AVATAR
@@ -64,7 +65,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 var mesh = RendererUtility.GetRequiredMesh(entry.GetTargetRenderer(meshiaCascadingMeshSimplifier)!);
                                 var target = new MeshSimplificationTarget() { Kind = MeshSimplificationTargetKind.AbsoluteTriangleCount, Value = entry.TargetTriangleCount };
                                 Mesh simplifiedMesh = new();
-                                parameters.Add((mesh, target, entry.Options, simplifiedMesh));
+
+                                var preserveBorderEdgesBoneIndices = MeshiaCascadingAvatarMeshSimplifier.GetPreserveBorderEdgesBoneIndices(context.AvatarRootObject, meshiaCascadingMeshSimplifier, entry);
+
+                                parameters.Add((mesh, target, entry.Options, preserveBorderEdgesBoneIndices, simplifiedMesh));
                             }
                         }
 
@@ -78,7 +82,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             {
                                 if(meshiaMeshSimplifier.enabled && meshiaMeshSimplifier.TryGetComponent<Renderer>(out var renderer))
                                 {
-                                    var (mesh, target, options, simplifiedMesh) = parameters[i++];
+                                    var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
                                 }
@@ -96,7 +100,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 {
                                     if (!cascadingTarget.IsValid(meshiaCascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
                                     var renderer = cascadingTarget.GetTargetRenderer(meshiaCascadingMeshSimplifier)!;
-                                    var (mesh, target, options, simplifiedMesh) = parameters[i++];
+                                    var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
