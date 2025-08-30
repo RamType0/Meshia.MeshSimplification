@@ -5,7 +5,8 @@
         "Meshia.MeshSimplification.Runtime",
         "VRC.SDKBase",
         "nadena.dev.modular-avatar.core",
-        "nadena.dev.ndmf.runtime"
+        "nadena.dev.ndmf.runtime",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

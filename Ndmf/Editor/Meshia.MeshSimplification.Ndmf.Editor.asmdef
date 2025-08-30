@@ -6,8 +6,7 @@
         "Meshia.MeshSimplification.Ndmf.Runtime",
         "nadena.dev.ndmf",
         "nadena.dev.ndmf.runtime",
-        "nadena.dev.modular-avatar.core",
-        "Unity.Mathematics"
+        "nadena.dev.modular-avatar.core"
     ],
     "includePlatforms": [
         "Editor"

@@ -6,10 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using nadena.dev.ndmf.runtime;
 using nadena.dev.modular_avatar.core;
 using UnityEngine.Pool;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections;
+using Unity.Mathematics;
 
 namespace Meshia.MeshSimplification.Ndmf
 {
@@ -126,6 +127,35 @@ namespace Meshia.MeshSimplification.Ndmf
             {
                 target.ResolveReference(this);
             }
+        }
+        public static BitArray? GetPreserveBorderEdgesBoneIndices(GameObject avatarRoot, MeshiaCascadingAvatarMeshSimplifier avatarMeshSimplifier, MeshiaCascadingAvatarMeshSimplifierRendererEntry entry)
+        {
+            if (avatarRoot.TryGetComponent(out Animator avatarAnimator) && entry.GetTargetRenderer(avatarMeshSimplifier) is SkinnedMeshRenderer skinnedMeshRenderer)
+            {
+                var bones = skinnedMeshRenderer.bones;
+                var preserveBorderEdgeBoneIndices = new BitArray(bones.Length);
+
+                for (ulong boneMask = entry.PreserveBorderEdgesBones; boneMask != 0ul; boneMask &= boneMask - 1)
+                {
+                    var bone = (HumanBodyBones)math.tzcnt(boneMask);
+                    var boneTransform = avatarAnimator.GetBoneTransform(bone);
+                    if (boneTransform != null)
+                    {
+                        var boneIndex = Array.IndexOf(bones, boneTransform);
+                        if (boneIndex != -1)
+                        {
+                            preserveBorderEdgeBoneIndices.Set(boneIndex, true);
+                        }
+                    }
+                }
+                return preserveBorderEdgeBoneIndices;
+            }
+            else
+            {
+                return null;
+            }
+
+
         }
     }
 

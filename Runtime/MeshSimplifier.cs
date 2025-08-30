@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Collections;
@@ -67,7 +68,17 @@ namespace Meshia.MeshSimplification
         /// <param name="options">The options for this mesh simplification.</param>
         /// <param name="destination">The destination to write simplified mesh.</param>
         /// <remarks>To process multiple meshes at once, use <see cref="SimplifyBatch(IReadOnlyList{ValueTuple{Mesh, MeshSimplificationTarget, MeshSimplifierOptions, Mesh}})"/> instead.</remarks>
-        public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination)
+        public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, Mesh destination) 
+            => Simplify(mesh, target, options, null, destination);
+        /// <summary>
+        /// Simplifies the given <paramref name="mesh"/> and writes the result to <paramref name="destination"/>.
+        /// </summary>
+        /// <param name="mesh">The mesh to simplify.</param>
+        /// <param name="target">The simplification target for this mesh simplification.</param>
+        /// <param name="options">The options for this mesh simplification.</param>
+        /// <param name="destination">The destination to write simplified mesh.</param>
+        /// <remarks>To process multiple meshes at once, use <see cref="SimplifyBatch(IReadOnlyList{ValueTuple{Mesh, MeshSimplificationTarget, MeshSimplifierOptions, Mesh}})"/> instead.</remarks>
+        public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination)
         {
             Allocator allocator = Unity.Collections.Allocator.TempJob;
             var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
@@ -76,11 +87,21 @@ namespace Meshia.MeshSimplification
 
             var meshSimplifier = new MeshSimplifier(allocator);
 
+            NativeBitArray nativePreserveBorderEdgesBoneIndices = new(preserveBorderEdgesBoneIndices?.Length ?? 0, allocator, NativeArrayOptions.UninitializedMemory);
+            if (preserveBorderEdgesBoneIndices is not null)
+            {
+                for (int i = 0; i < preserveBorderEdgesBoneIndices.Length; i++)
+                {
+                    nativePreserveBorderEdgesBoneIndices.Set(i, preserveBorderEdgesBoneIndices[i]);
+                }
+            }
+
             var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
 
             var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(1);
             NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
-            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+            var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, nativePreserveBorderEdgesBoneIndices, load);
+            nativePreserveBorderEdgesBoneIndices.Dispose(simplify);
             var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[0], simplifiedBlendShapes, simplify);
             meshSimplifier.Dispose(write);
             JobHandle.ScheduleBatchedJobs();
@@ -102,7 +123,10 @@ namespace Meshia.MeshSimplification
             }
             simplifiedBlendShapes.Dispose();
         }
-        public static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)> parameters)
+        public static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination)> parameters) 
+            => SimplifyBatch(parameters.Select<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination), (Mesh, MeshSimplificationTarget, MeshSimplifierOptions, BitArray?, Mesh)>(p => (p.Mesh, p.Target, p.Options, null, p.Destination)).ToList());
+
+        public static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, BitArray? PreserveBorderEdgesBoneIndices, Mesh Destination)> parameters)
         {
             Allocator allocator = Unity.Collections.Allocator.TempJob;
 
@@ -124,16 +148,25 @@ namespace Meshia.MeshSimplification
 
                 for (int i = 0; i < parameters.Count; i++)
                 {
-                    var (mesh, target, options, destination) = parameters[i];
+                    var (mesh, target, options, preserveBorderEdgesBoneIndices, destination) = parameters[i];
                     var originalMeshData = originalMeshDataArray[i];
                     var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
                     blendShapesList[i] = blendShapes;
                     var meshSimplifier = new MeshSimplifier(allocator);
+                    NativeBitArray nativePreserveBorderEdgesBoneIndices = new(preserveBorderEdgesBoneIndices?.Length ?? 0, allocator, NativeArrayOptions.UninitializedMemory);
+                    if (preserveBorderEdgesBoneIndices is not null)
+                    {
+                        for (int boneIndex = 0; boneIndex < preserveBorderEdgesBoneIndices.Length; boneIndex++)
+                        {
+                            nativePreserveBorderEdgesBoneIndices.Set(boneIndex, preserveBorderEdgesBoneIndices[boneIndex]);
+                        }
+                    }
                     var load = meshSimplifier.ScheduleLoadMeshData(originalMeshData, options);
                     NativeList<BlendShapeData> simplifiedBlendShapes = new(allocator);
                     simplifiedBlendShapesList[i] = simplifiedBlendShapes;
 
-                    var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, load);
+                    var simplify = meshSimplifier.ScheduleSimplify(originalMeshData, blendShapes, target, nativePreserveBorderEdgesBoneIndices, load);
+                    nativePreserveBorderEdgesBoneIndices.Dispose(simplify);
                     var write = meshSimplifier.ScheduleWriteMeshData(originalMeshData, blendShapes, simplifiedMeshDataArray[i], simplifiedBlendShapes, simplify);
                     meshSimplifier.Dispose(write);
                     jobHandles[i] = write;
