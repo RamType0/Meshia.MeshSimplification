@@ -47,15 +47,9 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                     {
                         foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
                         {
-                            if (meshiaMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                            if(meshiaMeshSimplifier.enabled && meshiaMeshSimplifier.TryGetComponent<Renderer>(out var renderer))
                             {
-                                var sourceMesh = skinnedMeshRenderer.sharedMesh;
-                                Mesh simplifiedMesh = new();
-                                parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, simplifiedMesh));
-                            }
-                            if (meshiaMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
-                            {
-                                var sourceMesh = meshFilter.sharedMesh;
+                                var sourceMesh = RendererUtility.GetRequiredMesh(renderer);
                                 Mesh simplifiedMesh = new();
                                 parameters.Add((sourceMesh, meshiaMeshSimplifier.target, meshiaMeshSimplifier.options, simplifiedMesh));
                             }
@@ -82,19 +76,15 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
                             foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
                             {
-                                if (meshiaMeshSimplifier.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer))
+                                if(meshiaMeshSimplifier.enabled && meshiaMeshSimplifier.TryGetComponent<Renderer>(out var renderer))
                                 {
                                     var (mesh, target, options, simplifiedMesh) = parameters[i++];
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
-                                    skinnedMeshRenderer.sharedMesh = simplifiedMesh;
+                                    RendererUtility.SetMesh(renderer, simplifiedMesh);
                                 }
-                                if (meshiaMeshSimplifier.TryGetComponent<MeshFilter>(out var meshFilter))
-                                {
-                                    var (mesh, target, options, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
-                                    meshFilter.sharedMesh = simplifiedMesh;
-                                }
-
+                            }
+                            foreach (var meshiaMeshSimplifier in meshiaMeshSimplifiers)
+                            {
                                 UnityEngine.Object.DestroyImmediate(meshiaMeshSimplifier);
                             }
 
@@ -110,10 +100,13 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                     AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
-                                    UnityEngine.Object.DestroyImmediate(meshiaCascadingMeshSimplifier);
                                 }
                             }
 
+                            foreach (var meshiaCascadingMeshSimplifier in meshiaCascadingMeshSimplifiers)
+                            {
+                                UnityEngine.Object.DestroyImmediate(meshiaCascadingMeshSimplifier);
+                            }
 #endif
 
                         }
