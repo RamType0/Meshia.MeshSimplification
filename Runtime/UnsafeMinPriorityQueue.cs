@@ -145,10 +145,7 @@ namespace Meshia.MeshSimplification
                 {
                     nodes.AddRangeNoResize(ptr, elements.Length);
                 }
-                if (Count > 1)
-                {
-                    Heapify();
-                }
+                Heapify();
             }
             else
             {
@@ -180,7 +177,7 @@ namespace Meshia.MeshSimplification
         /// Gets the index of an element's parent.
         /// </summary>
         [return: AssumeRange(0, (int.MaxValue - 1) >> Log2Arity)]
-        private static int GetParentIndex(int index) => (index - 1) >> Log2Arity;
+        private static int GetParentIndex([AssumeRange(1, int.MaxValue)] int index) => (index - 1) >> Log2Arity;
 
         /// <summary>
         /// Gets the index of the first child of an element.
@@ -192,6 +189,11 @@ namespace Meshia.MeshSimplification
         /// </summary>
         internal void Heapify()
         {
+            if (nodes.Length <= 1)
+            {
+                return;
+            }
+
             // Leaves of the tree are in fact 1-element heaps, for which there
             // is no need to correct them. The heap property needs to be restored
             // only for higher nodes, starting from the first node that has children.
