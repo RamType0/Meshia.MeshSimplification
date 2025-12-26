@@ -189,7 +189,7 @@ namespace Meshia.MeshSimplification
         /// </summary>
         internal void Heapify()
         {
-            if(nodes.Length <= 1)
+            if (nodes.Length <= 1)
             {
                 return;
             }
