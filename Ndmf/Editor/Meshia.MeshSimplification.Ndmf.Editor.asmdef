@@ -28,6 +28,11 @@
             "define": "ENABLE_NDMF"
         },
         {
+            "name": "nadena.dev.ndmf",
+            "expression": "1.8.0",
+            "define": "ENABLE_NDMF_PLATFORM"
+        },
+        {
             "name": "nadena.dev.modular-avatar",
             "expression": "",
             "define": "ENABLE_MODULAR_AVATAR"
