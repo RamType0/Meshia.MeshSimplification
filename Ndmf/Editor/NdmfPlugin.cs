@@ -14,7 +14,9 @@ using UnityEngine.Pool;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
+#if ENABLE_NDMF_PLATFORM
     [RunsOnAllPlatforms]
+#endif
     class NdmfPlugin : Plugin<NdmfPlugin>
     {
         public override string DisplayName => "Meshia NDMF Mesh Simplifier";
