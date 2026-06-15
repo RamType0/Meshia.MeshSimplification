@@ -14,6 +14,7 @@ using UnityEngine.Pool;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor
 {
+    [RunsOnAllPlatforms]
     class NdmfPlugin : Plugin<NdmfPlugin>
     {
         public override string DisplayName => "Meshia NDMF Mesh Simplifier";
@@ -83,7 +84,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 if(meshiaMeshSimplifier.enabled && meshiaMeshSimplifier.TryGetComponent<Renderer>(out var renderer))
                                 {
                                     var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    if (context.AssetContainer != null) AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
                                 }
                             }
@@ -101,7 +102,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                     if (!cascadingTarget.IsValid(meshiaCascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
                                     var renderer = cascadingTarget.GetTargetRenderer(meshiaCascadingMeshSimplifier)!;
                                     var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
-                                    AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    if (context.AssetContainer != null) AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
                                 }
