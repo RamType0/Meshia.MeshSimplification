@@ -47,6 +47,7 @@ jobs:
            testMode: editmode
            vpmPackages: 
             - nadena.dev.modular-avatar
+            - com.vrchat.base
            
    steps:
      - name: Create package testing project
