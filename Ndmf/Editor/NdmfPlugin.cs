@@ -86,7 +86,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                 if(meshiaMeshSimplifier.enabled && meshiaMeshSimplifier.TryGetComponent<Renderer>(out var renderer))
                                 {
                                     var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
-                                    if (context.AssetContainer != null) AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    if (context.AssetContainer != null)
+                                    {
+                                        AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    }
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
                                 }
                             }
@@ -104,7 +107,10 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                                     if (!cascadingTarget.IsValid(meshiaCascadingMeshSimplifier) || !cascadingTarget.Enabled) continue;
                                     var renderer = cascadingTarget.GetTargetRenderer(meshiaCascadingMeshSimplifier)!;
                                     var (mesh, target, options, _, simplifiedMesh) = parameters[i++];
-                                    if (context.AssetContainer != null) AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    if (context.AssetContainer != null)
+                                    {
+                                        AssetDatabase.AddObjectToAsset(simplifiedMesh, context.AssetContainer);
+                                    }
                                     RendererUtility.SetMesh(renderer, simplifiedMesh);
 
                                 }
