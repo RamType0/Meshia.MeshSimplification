@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using nadena.dev.ndmf.preview;
 using System.Collections;
+using Meshia.MeshSimplification.Editor;
 
 namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
 {
@@ -45,7 +46,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor.Preview
             Mesh simplifiedMesh = new();
             try
             {
-                await MeshSimplifier.SimplifyAsync(proxyMesh, target, options, preserveBorderEdgesBoneIndices, simplifiedMesh);
+                await EditorMeshSimplifier.SimplifyAsync(proxyMesh, target, options, preserveBorderEdgesBoneIndices, simplifiedMesh);
             }
             catch (Exception)
             {

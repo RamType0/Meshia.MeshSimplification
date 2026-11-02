@@ -1,4 +1,5 @@
 #nullable enable
+using Meshia.MeshSimplification.Editor;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using UnityEditor;
@@ -52,7 +53,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
                             {
                                 Mesh simplifiedMesh = new();
 
-                                MeshSimplifier.Simplify(targetMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
+                                EditorMeshSimplifier.Simplify(targetMesh, ndmfMeshSimplifier.target, ndmfMeshSimplifier.options, simplifiedMesh);
 
                                 AssetDatabase.CreateAsset(simplifiedMesh, Path.Join("Assets/", Path.GetRelativePath(Application.dataPath, absolutePath)));
                             }

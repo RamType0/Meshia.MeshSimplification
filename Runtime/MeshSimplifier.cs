@@ -79,9 +79,12 @@ namespace Meshia.MeshSimplification
         /// <param name="destination">The destination to write simplified mesh.</param>
         /// <remarks>To process multiple meshes at once, use <see cref="SimplifyBatch(IReadOnlyList{ValueTuple{Mesh, MeshSimplificationTarget, MeshSimplifierOptions, Mesh}})"/> instead.</remarks>
         public static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination)
+            => Simplify(mesh, target, options, preserveBorderEdgesBoneIndices, destination, false);
+
+        internal static void Simplify(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination, bool useMeshUtility)
         {
             Allocator allocator = Unity.Collections.Allocator.TempJob;
-            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
+            var originalMeshDataArray = AcquireReadOnlyMeshData(mesh, useMeshUtility);
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
@@ -127,6 +130,9 @@ namespace Meshia.MeshSimplification
             => SimplifyBatch(parameters.Select<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, Mesh Destination), (Mesh, MeshSimplificationTarget, MeshSimplifierOptions, BitArray?, Mesh)>(p => (p.Mesh, p.Target, p.Options, null, p.Destination)).ToList());
 
         public static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, BitArray? PreserveBorderEdgesBoneIndices, Mesh Destination)> parameters)
+            => SimplifyBatch(parameters, false);
+
+        internal static void SimplifyBatch(IReadOnlyList<(Mesh Mesh, MeshSimplificationTarget Target, MeshSimplifierOptions Options, BitArray? PreserveBorderEdgesBoneIndices, Mesh Destination)> parameters, bool useMeshUtility)
         {
             Allocator allocator = Unity.Collections.Allocator.TempJob;
 
@@ -143,7 +149,7 @@ namespace Meshia.MeshSimplification
                     destinations.Add(parameter.Destination);
                 }
 
-                var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(meshes);
+                var originalMeshDataArray = AcquireReadOnlyMeshData(meshes, useMeshUtility);
                 var simplifiedMeshDataArray = Mesh.AllocateWritableMeshData(originalMeshDataArray.Length);
 
                 for (int i = 0; i < parameters.Count; i++)
@@ -217,10 +223,13 @@ namespace Meshia.MeshSimplification
         /// <param name="destination">The destination to write simplified mesh.</param>
         /// <param name="cancellationToken">The token to monitor for cancellation requests. The default value is <see cref="CancellationToken.None"/>.</param>
         /// <returns>A task that represents the asynchronous mesh simplification operation.</returns>
-        public static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination, CancellationToken cancellationToken = default)
+        public static Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination, CancellationToken cancellationToken = default)
+            => SimplifyAsync(mesh, target, options, preserveBorderEdgesBoneIndices, destination, false, cancellationToken);
+
+        internal static async Task SimplifyAsync(Mesh mesh, MeshSimplificationTarget target, MeshSimplifierOptions options, BitArray? preserveBorderEdgesBoneIndices, Mesh destination, bool useMeshUtility, CancellationToken cancellationToken = default)
         {
             Allocator allocator = Unity.Collections.Allocator.Persistent;
-            var originalMeshDataArray = Mesh.AcquireReadOnlyMeshData(mesh);
+            var originalMeshDataArray = AcquireReadOnlyMeshData(mesh, useMeshUtility);
             var originalMeshData = originalMeshDataArray[0];
             var blendShapes = BlendShapeData.GetMeshBlendShapes(mesh, allocator);
 
@@ -275,6 +284,39 @@ namespace Meshia.MeshSimplification
                     simplifiedBlendShape.Dispose();
                 }
                 simplifiedBlendShapes.Dispose();
+            }
+        }
+
+
+        private static Mesh.MeshDataArray AcquireReadOnlyMeshData(Mesh mesh, bool useMeshUtility)
+        { 
+            if (useMeshUtility)
+            {
+#if UNITY_EDITOR
+                return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(mesh);
+#else
+                throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
+#endif
+            }
+            else
+            {
+                return Mesh.AcquireReadOnlyMeshData(mesh);
+            }
+        }
+
+        private static Mesh.MeshDataArray AcquireReadOnlyMeshData(List<Mesh> meshes, bool useMeshUtility)
+        {
+            if (useMeshUtility)
+            {
+#if UNITY_EDITOR
+                return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(meshes);
+#else
+                throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
+#endif
+            }
+            else
+            {
+                return Mesh.AcquireReadOnlyMeshData(meshes);
             }
         }
 

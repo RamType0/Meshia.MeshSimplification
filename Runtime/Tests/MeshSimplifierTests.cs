@@ -12,6 +12,74 @@ namespace Meshia.MeshSimplification.Tests
 {
     public class MeshSimplifierTests
     {
+        // Exercise all entry points and ensure the opt-in does not affect public calls.
+        [TestCase("sync")]
+        [TestCase("batch")]
+        [TestCase("async")]
+        public async Task MeshUtilityAccessIsExplicitAndEditorOnly(string entryPoint)
+        {
+            var source = Object.Instantiate(GetPrimitiveMesh(PrimitiveType.Sphere));
+            Mesh destination = new();
+            source.UploadMeshData(true);
+            Assert.IsFalse(source.isReadable);
+            var target = new MeshSimplificationTarget
+            {
+                Kind = MeshSimplificationTargetKind.RelativeVertexCount,
+                Value = 0.5f,
+            };
+            var parameters = new (Mesh, MeshSimplificationTarget, MeshSimplifierOptions, BitArray, Mesh)[]
+            {
+                (source, target, MeshSimplifierOptions.Default, null, destination),
+            };
+            try
+            {
+                Assert.ThrowsAsync<System.InvalidOperationException>(async () => await RunPublic());
+#if UNITY_EDITOR
+                await RunInternal();
+                Assert.Greater(destination.vertexCount, 0);
+                Assert.LessOrEqual(destination.vertexCount, source.vertexCount * 0.5f);
+#else
+                Assert.ThrowsAsync<System.PlatformNotSupportedException>(async () => await RunInternal());
+#endif
+                Assert.ThrowsAsync<System.InvalidOperationException>(async () => await RunPublic());
+            }
+            finally
+            {
+                Object.Destroy(source);
+                Object.Destroy(destination);
+            }
+
+            Task RunPublic()
+            {
+                switch (entryPoint)
+                {
+                    case "sync":
+                        MeshSimplifier.Simplify(source, target, MeshSimplifierOptions.Default, destination);
+                        return Task.CompletedTask;
+                    case "batch":
+                        MeshSimplifier.SimplifyBatch(parameters);
+                        return Task.CompletedTask;
+                    default:
+                        return MeshSimplifier.SimplifyAsync(source, target, MeshSimplifierOptions.Default, destination);
+                }
+            }
+
+            Task RunInternal()
+            {
+                switch (entryPoint)
+                {
+                    case "sync":
+                        MeshSimplifier.Simplify(source, target, MeshSimplifierOptions.Default, null, destination, useMeshUtility: true);
+                        return Task.CompletedTask;
+                    case "batch":
+                        MeshSimplifier.SimplifyBatch(parameters, useMeshUtility: true);
+                        return Task.CompletedTask;
+                    default:
+                        return MeshSimplifier.SimplifyAsync(source, target, MeshSimplifierOptions.Default, null, destination, useMeshUtility: true);
+                }
+            }
+        }
+
         static Mesh GetPrimitiveMesh(PrimitiveType type)
         {
             var gameObject = GameObject.CreatePrimitive(type);
