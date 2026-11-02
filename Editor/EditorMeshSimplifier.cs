@@ -9,8 +9,7 @@ using UnityEngine;
 namespace Meshia.MeshSimplification.Editor
 {
     /// <summary>
-    /// Editor-only simplification entry points that use UnityEditor.MeshUtility
-    /// to acquire mesh data without requiring Mesh.isReadable.
+    /// Editor-only variant of <see cref="MeshSimplifier"/> which allows meshes with <c>Mesh.isReadable == false</c> .
     /// </summary>
     public static class EditorMeshSimplifier
     {

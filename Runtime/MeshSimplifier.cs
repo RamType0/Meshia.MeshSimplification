@@ -287,25 +287,37 @@ namespace Meshia.MeshSimplification
             }
         }
 
-        // Keep Editor-only mesh access opt-in and scoped to each invocation.
+
         private static Mesh.MeshDataArray AcquireReadOnlyMeshData(Mesh mesh, bool useMeshUtility)
-        {
+        { 
+            if (useMeshUtility)
+            {
 #if UNITY_EDITOR
-            if (useMeshUtility) return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(mesh);
+                return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(mesh);
 #else
-            if (useMeshUtility) throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
+                throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
 #endif
-            return Mesh.AcquireReadOnlyMeshData(mesh);
+            }
+            else
+            {
+                return Mesh.AcquireReadOnlyMeshData(mesh);
+            }
         }
 
         private static Mesh.MeshDataArray AcquireReadOnlyMeshData(List<Mesh> meshes, bool useMeshUtility)
         {
+            if (useMeshUtility)
+            {
 #if UNITY_EDITOR
-            if (useMeshUtility) return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(meshes);
+                return UnityEditor.MeshUtility.AcquireReadOnlyMeshData(meshes);
 #else
-            if (useMeshUtility) throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
+                throw new PlatformNotSupportedException("MeshUtility mesh access is only available in the Unity Editor.");
 #endif
-            return Mesh.AcquireReadOnlyMeshData(meshes);
+            }
+            else
+            {
+                return Mesh.AcquireReadOnlyMeshData(meshes);
+            }
         }
 
         private static void ApplySimplifiedMesh(Mesh mesh, Mesh.MeshDataArray simplifiedMeshDataArray, ReadOnlySpan<BlendShapeData> simplifiedBlendShapes, Mesh destination)
