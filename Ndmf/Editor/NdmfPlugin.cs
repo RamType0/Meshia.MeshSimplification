@@ -1,4 +1,5 @@
 #nullable enable
+using Meshia.MeshSimplification.Editor;
 using Meshia.MeshSimplification.Ndmf.Editor;
 using Meshia.MeshSimplification.Ndmf.Editor.Preview;
 using nadena.dev.ndmf;
@@ -77,7 +78,7 @@ namespace Meshia.MeshSimplification.Ndmf.Editor
 
 #endif
 
-                        MeshSimplifier.SimplifyBatch(parameters);
+                        EditorMeshSimplifier.SimplifyBatch(parameters);
                         {
                             var i = 0;
 
