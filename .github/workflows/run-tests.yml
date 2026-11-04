@@ -52,6 +52,18 @@ jobs:
             - com.vrchat.base
            
    steps:
+     - name: Free disk space for Unity Docker image
+       uses: jlumbroso/free-disk-space@v1.3.1
+       with:
+         # Unity and its SDKs run inside Docker; these host SDKs are unused.
+         android: true
+         dotnet: true
+         haskell: true
+         large-packages: false
+         docker-images: false
+         tool-cache: false
+         swap-storage: false
+
      - name: Create package testing project
        uses: RamType0/create-unity-project@v0.2.0
        with: 
