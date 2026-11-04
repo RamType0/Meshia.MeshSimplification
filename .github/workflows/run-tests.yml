@@ -3,11 +3,12 @@ name: Run Tests
 on:
  workflow_dispatch:
  push:
+   branches: [main]
    paths-ignore:
      - '.docfx/**'
      - '*.md'
      - '.gitignore'
- pull_request_target:
+ pull_request:
    paths-ignore:
      - '.docfx/**'
      - '*.md'
@@ -24,6 +25,7 @@ jobs:
  test:
    name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
    permissions:
+     contents: read
      checks: write
    runs-on: ubuntu-latest
    strategy:
@@ -123,7 +125,18 @@ jobs:
          restore-keys: |
            Library-
 
+     - name: Initialize generated project Git metadata
+       working-directory: ${{ env.PROJECT_PATH }}
+       shell: bash
+       run: |
+         # The CLI queries Git at the project root, not the nested package checkout.
+         # An empty commit supplies version metadata without tracking generated files
+         # or changing the package's independent Git repository.
+         git init --initial-branch=ci-generated-project
+         git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit --allow-empty -m "Initialize generated Unity test project"
+
      - uses: game-ci/unity-test-runner@v4
+       id: tests
        with:
          unityVersion: ${{ matrix.unityVersion }}
          testMode: ${{ matrix.testMode }}
@@ -134,13 +147,13 @@ jobs:
          projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
-       if: always()
+       if: always() && steps.tests.outputs.artifactsPath != ''
        with:
          name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
-       if: always()
+       if: always() && steps.tests.outputs.coveragePath != ''
        with:
          name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
