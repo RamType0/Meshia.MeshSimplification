@@ -151,6 +151,9 @@ jobs:
 
      - uses: game-ci/unity-test-runner@v4
        id: tests
+       env:
+         # latest-release lookup reads the environment, not the reporting input.
+         GITHUB_TOKEN: ${{ github.token }}
        with:
          unityVersion: ${{ matrix.unityVersion }}
          testMode: ${{ matrix.testMode }}
