@@ -3,11 +3,12 @@ name: Run Tests
 on:
  workflow_dispatch:
  push:
+   branches: [main]
    paths-ignore:
      - '.docfx/**'
      - '*.md'
      - '.gitignore'
- pull_request_target:
+ pull_request:
    paths-ignore:
      - '.docfx/**'
      - '*.md'
@@ -24,6 +25,7 @@ jobs:
  test:
    name: Test in ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
    permissions:
+     contents: read
      checks: write
    runs-on: ubuntu-latest
    strategy:
@@ -50,11 +52,24 @@ jobs:
             - com.vrchat.base
            
    steps:
+     - name: Free disk space for Unity Docker image
+       uses: jlumbroso/free-disk-space@v1.3.1
+       with:
+         # Unity and its SDKs run inside Docker; these host SDKs are unused.
+         android: true
+         dotnet: true
+         haskell: true
+         large-packages: false
+         docker-images: false
+         tool-cache: false
+         swap-storage: false
+
      - name: Create package testing project
        uses: RamType0/create-unity-project@v0.2.0
        with: 
          projectPath: ${{ env.PROJECT_PATH }}
          unityVersion: ${{ matrix.unityVersion }}
+         # com.vrchat.base/DOTween also needs com.unity.modules.physics2d.
          # com.vrchat.base is missing dependency to com.unity.modules.video
          # com.unity.xr.oculus (Referenced by com.vrchat.base) is missing dependency to com.unity.modules.androidjni
          # Until https://github.com/bdunderscore/ndmf/pull/655 is merged into stable version, we need to define com.unity.modules.animation dependency explicitly. 
@@ -63,6 +78,7 @@ jobs:
               "dependencies": {
                 "com.unity.modules.androidjni": "1.0.0",
                 "com.unity.modules.animation": "1.0.0",
+                "com.unity.modules.physics2d": "1.0.0",
                 "com.unity.modules.video": "1.0.0",
                 "com.unity.testtools.codecoverage": "1.2.6"
               }
@@ -123,7 +139,24 @@ jobs:
          restore-keys: |
            Library-
 
+     - name: Initialize generated project Git metadata
+       working-directory: ${{ env.PROJECT_PATH }}
+       shell: bash
+       run: |
+         # The CLI queries Git at the project root, not the nested package checkout.
+         # An empty commit supplies version metadata without tracking generated files
+         # or changing the package's independent Git repository.
+         git init --initial-branch=ci-generated-project
+         git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit --allow-empty -m "Initialize generated Unity test project"
+
      - uses: game-ci/unity-test-runner@v4
+       id: tests
+       env:
+         # latest-release lookup reads the environment, not the reporting input.
+         GITHUB_TOKEN: ${{ github.token }}
+         # 6000.0 accepts the legacy ULF import but has no usable entitlement.
+         # Use the existing Unity account credentials directly for that editor.
+         UNITY_LICENSE: ${{ matrix.unityVersion != '6000.0.51f1' && secrets.UNITY_LICENSE || '' }}
        with:
          unityVersion: ${{ matrix.unityVersion }}
          testMode: ${{ matrix.testMode }}
@@ -134,13 +167,13 @@ jobs:
          projectPath: ${{ env.PROJECT_PATH }}
 
      - uses: actions/upload-artifact@v4
-       if: always()
+       if: always() && steps.tests.outputs.artifactsPath != ''
        with:
          name: Test results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.artifactsPath }}
 
      - uses: actions/upload-artifact@v4
-       if: always()
+       if: always() && steps.tests.outputs.coveragePath != ''
        with:
          name: Coverage results for ${{ matrix.testMode }} on ${{ matrix.unityVersion }}${{ matrix.vpmPackages[0] != null && ' with VPM packages ' || '' }}${{ join(matrix.vpmPackages, ', ') }}
          path: ${{ env.PROJECT_PATH }}/${{ steps.tests.outputs.coveragePath }}
