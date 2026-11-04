@@ -75,3 +75,16 @@ jobs:
             ${{ env.packagePath }}/package.json
           tag_name: ${{ env.version }}
           prerelease: ${{ contains(env.version, '-') }}
+
+  update-vpm-repository:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Update VPM repository
+        env:
+          GH_TOKEN: ${{ secrets.VPM_REPOSITORY_TOKEN }}
+        run: |
+          gh workflow run build-repository.yml \
+            --repo RamType0/VpmRepository \
+            --ref main
