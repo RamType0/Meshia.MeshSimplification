@@ -154,6 +154,9 @@ jobs:
        env:
          # latest-release lookup reads the environment, not the reporting input.
          GITHUB_TOKEN: ${{ github.token }}
+         # 6000.0 accepts the legacy ULF import but has no usable entitlement.
+         # Use the existing Unity account credentials directly for that editor.
+         UNITY_LICENSE: ${{ matrix.unityVersion != '6000.0.51f1' && secrets.UNITY_LICENSE || '' }}
        with:
          unityVersion: ${{ matrix.unityVersion }}
          testMode: ${{ matrix.testMode }}
