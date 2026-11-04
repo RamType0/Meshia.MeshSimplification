@@ -52,7 +52,8 @@ namespace Meshia.MeshSimplification
             }
             else
             {
-                first = new(list.Ptr, mid - 1);
+                // The median belongs to this node; the left subtree owns [0, mid).
+                first = new(list.Ptr, mid);
 
                 second = new(list.Ptr + mid + 1, list.Length - mid - 1);
             }
